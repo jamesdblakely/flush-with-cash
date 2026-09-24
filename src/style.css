@@ -1,0 +1,13 @@
+:root { font-family: Arial, sans-serif; color: #f4f0d9; background: #142d32; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 300px; }
+main { max-width: 1040px; margin: auto; padding: 44px 28px 24px; }
+header { margin-bottom: 28px; }
+.eyebrow { color: #edc571; font-size: 11px; font-weight: bold; letter-spacing: 3px; }
+h1 { font-size: clamp(32px, 5vw, 52px); letter-spacing: -2px; margin: 12px 0; }
+p { color: #a9c7bb; margin: 0; }
+#game { aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border: 1px solid #345459; border-radius: 12px; }
+canvas { display: block; }
+footer { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: #a9c7bb; font-size: 12px; padding-top: 20px; }
+.status { color: #edc571; }
+@media (max-width: 600px) { main { padding: 28px 16px; } }
