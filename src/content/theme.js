@@ -19,8 +19,8 @@ export const sites = [
   { id: 'station', name: 'Station Steps', clue: 'Crowded commuters, expensive permit', signal: 'Very busy • urgent need • crush risk • premium rate', trafficTier: 'crush', minimumReputation: 55, cost: 125, price: 18, traffic: 25, demand: 0.82, wear: 1.9, x: 270, y: 218 },
   { id: 'market', name: 'Market Lane', clue: 'Hungry shoppers linger here', signal: 'Busy • strong need', trafficTier: 'busy', minimumReputation: 30, cost: 75, traffic: 17, demand: 0.75, wear: 1.1, x: 470, y: 161 },
   { id: 'park', name: 'Pigeon Park', clue: 'Long walks, few alternatives', signal: 'Steady • urgent need', trafficTier: 'steady', cost: 55, traffic: 12, demand: 0.91, wear: 1, x: 665, y: 217 },
-  { id: 'office', name: 'Office Row', clue: 'Steady suits, short breaks', signal: 'Busy • moderate need', trafficTier: 'busy', cost: 95, traffic: 19, demand: 0.56, wear: 0.9, x: 405, y: 345 },
-  { id: 'canal', name: 'Canal Walk', clue: 'Pretty view, wandering crowds', signal: 'Quiet • solid need', trafficTier: 'quiet', cost: 40, traffic: 10, demand: 0.63, wear: 0.85, x: 555, y: 345 },
+  { id: 'office', name: 'Office Row', clue: 'Steady suits, short breaks', signal: 'Busy • moderate need', trafficTier: 'busy', cost: 95, traffic: 19, demand: 0.56, wear: 0.9, x: 363, y: 350 },
+  { id: 'canal', name: 'Canal Walk', clue: 'Pretty view, wandering crowds', signal: 'Quiet • solid need', trafficTier: 'quiet', cost: 40, traffic: 10, demand: 0.63, wear: 0.85, x: 588, y: 355 },
   { id: 'festival', name: 'Weekend Festival', clue: 'A packed crowd with nowhere else to go', signal: 'Massive crowd • premium rate • daily service required', trafficTier: 'crush', minimumReputation: 65, cost: 225, price: 28, traffic: 55, demand: 0.98, wear: 2.4, minimumCondition: 80, days: [5, 6], x: 480, y: 275 },
 ];
 
