@@ -83,19 +83,15 @@ export class FoundationScene extends Phaser.Scene {
     };
     getAvailableSites(this.state).forEach(site => {
       const { x, y } = site;
-      g.fillStyle(0x325d5b, 0.45).fillEllipse(x, y + 13, 86, 26);
       const landmark = landmarks[site.id];
       if (landmark) {
         this.add.image(x, y + landmark.yOffset, landmark.key)
-          .setDisplaySize(landmark.size, landmark.size);
+          .setDisplaySize(landmark.size, landmark.size)
+          .setAngle(0);
       }
       if (this.state.site === site.id) {
         this.drawUnit(g, x, y);
         if (this.state.signage) this.drawSign(g, x, y);
-      }
-      else {
-        this.polygon(g, [[x, y - 12], [x + 29, y], [x, y + 12], [x - 29, y]], 0xf1d685);
-        g.lineStyle(2, 0x33595a).strokeEllipse(x, y, 60, 25);
       }
       if (this.state.phase === 'planning') {
         const trafficTier = trafficTiers[site.trafficTier];
