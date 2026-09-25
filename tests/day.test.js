@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sites, economy } from '../src/content/theme.js';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
-  nextDay, serviceUnit, canAffordNextDay } from '../src/simulation/state.js';
+  nextDay, serviceUnit, buySignage, canAffordNextDay } from '../src/simulation/state.js';
 
 function openAt(siteId) {
   let state = createInitialState();
@@ -76,4 +76,22 @@ test('a business that cannot afford any site must restart', () => {
   const state = { ...createInitialState(), phase: 'result', bank: 0 };
   assert.equal(canAffordNextDay(state), false);
   assert.equal(nextDay(state), state);
+});
+
+test('town sign costs cash once, brings more visitors, and carries into later days', () => {
+  const planning = { ...createInitialState(), phase: 'planning' };
+  const signed = buySignage(planning);
+  assert.equal(signed.bank, planning.bank - economy.signageCost);
+  assert.equal(signed.costs, economy.signageCost);
+  assert.equal(signed.signage, true);
+  assert.equal(buySignage(signed), signed);
+
+  let normalDay = placeUnit(selectSite(planning, 'market'));
+  let signedDay = placeUnit(selectSite(signed, 'market'));
+  while (normalDay.phase === 'running') normalDay = advanceMinute(normalDay);
+  while (signedDay.phase === 'running') signedDay = advanceMinute(signedDay);
+  assert.ok(signedDay.visitors > normalDay.visitors);
+  assert.equal(signedDay.costs - normalDay.costs, economy.signageCost);
+  assert.equal(nextDay(signedDay).signage, true);
+  assert.equal(nextDay(signedDay).costs, 0);
 });

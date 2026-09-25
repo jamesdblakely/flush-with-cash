@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { theme, sites, economy } from '../content/theme.js';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
-  nextDay, serviceUnit, canAffordNextDay } from '../simulation/state.js';
+  nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
 
 const ink = '#193a40';
 const cream = '#fff4ce';
@@ -62,7 +62,10 @@ export class FoundationScene extends Phaser.Scene {
     sites.forEach((site, index) => {
       const { x, y } = site;
       g.fillStyle(0x325d5b, 0.45).fillEllipse(x, y + 13, 86, 26);
-      if (this.state.site === site.id) this.drawUnit(g, x, y);
+      if (this.state.site === site.id) {
+        this.drawUnit(g, x, y);
+        if (this.state.signage) this.drawSign(g, x, y);
+      }
       else {
         this.polygon(g, [[x, y - 12], [x + 29, y], [x, y + 12], [x - 29, y]], 0xf1d685);
         g.lineStyle(2, 0x33595a).strokeEllipse(x, y, 60, 25);
@@ -120,6 +123,13 @@ export class FoundationScene extends Phaser.Scene {
       } });
   }
 
+  drawSign(g, x, y) {
+    g.fillStyle(0x193a40).fillRect(x + 37, y - 57, 4, 44);
+    g.fillStyle(0xf4ca72).fillRect(x + 25, y - 69, 30, 18);
+    g.lineStyle(2, 0x193a40).strokeRect(x + 25, y - 69, 30, 18);
+    this.label(x + 40, y - 60, 'WC', 11, ink).setOrigin(0.5);
+  }
+
   walkAway(person, direction) {
     this.tweens.add({ targets: person, x: person.x + direction * 115,
       y: person.y + 30, alpha: 0, duration: 660,
@@ -158,6 +168,8 @@ export class FoundationScene extends Phaser.Scene {
     const selected = sites.find(site => site.id === this.state.selectedSite);
     const canService = this.state.condition < 100 &&
       this.state.bank - economy.serviceCost >= Math.min(...sites.map(site => site.cost));
+    const canBuySignage = !this.state.signage &&
+      this.state.bank - economy.signageCost >= Math.min(...sites.map(site => site.cost));
     this.add.rectangle(480, 472, 960, 136, 0x193a40, 0.96);
     this.label(22, 410, `DAY ${this.state.day}  •  CHOOSE A SITE`, 18, '#f4ca72');
     this.label(22, 438, selected ? `${selected.name}  •  Permit $${selected.cost}` : 'Tap a site pad, number, or name below.', 16);
@@ -168,6 +180,10 @@ export class FoundationScene extends Phaser.Scene {
     this.button(815, 432, 255, serviceLabel, () => {
       this.state = serviceUnit(this.state); this.paint();
     }, canService);
+    this.button(815, 381, 255, this.state.signage ? 'TOWN SIGN INSTALLED' :
+      canBuySignage ? `BUY TOWN SIGN $${economy.signageCost}` : 'NEED CASH FOR SIGN', () => {
+      this.state = buySignage(this.state); this.paint();
+    }, canBuySignage);
     this.button(815, 483, 255, selected ? `PLACE FOR $${selected.cost}` : 'PICK A SITE', () => {
       this.state = placeUnit(this.state); this.paint();
     }, Boolean(selected && this.state.bank >= selected.cost));

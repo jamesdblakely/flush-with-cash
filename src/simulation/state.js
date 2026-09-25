@@ -4,7 +4,8 @@ export function createInitialState() {
   return { phase: 'title', day: 1, bank: economy.startingCash,
     selectedSite: null, site: null,
     minute: 0, uses: 0, revenue: 0, costs: 0, condition: 100, satisfaction: 72,
-    reputation: 50, dayStartReputation: 50, visitors: 0, passers: 0, turnedAway: 0,
+    reputation: 50, dayStartReputation: 50, signage: false,
+    visitors: 0, passers: 0, turnedAway: 0,
     activity: null, events: [], seed: 1847 };
 }
 
@@ -26,6 +27,14 @@ export function serviceUnit(state) {
   return { ...state, bank: state.bank - economy.serviceCost,
     costs: state.costs + economy.serviceCost, condition: 100,
     events: [`Unit serviced: -$${economy.serviceCost}.`] };
+}
+
+export function buySignage(state) {
+  if (state.phase !== 'planning' || state.signage ||
+    state.bank - economy.signageCost < Math.min(...sites.map(site => site.cost))) return state;
+  return { ...state, bank: state.bank - economy.signageCost,
+    costs: state.costs + economy.signageCost, signage: true,
+    events: [`Bought a town sign: -$${economy.signageCost}.`] };
 }
 
 export function selectSite(state, id) {
@@ -53,7 +62,8 @@ export function advanceMinute(state) {
   let { seed, bank, uses, revenue, costs, condition, satisfaction, reputation,
     visitors, passers, turnedAway } = state;
   let roll; [seed, roll] = random(seed);
-  const arrival = roll < site.traffic / 60;
+  const traffic = site.traffic * (state.signage ? economy.signageTrafficBoost : 1);
+  const arrival = roll < Math.min(1, traffic / 60);
   const events = [...state.events];
   let activity = null;
   if (arrival) {
