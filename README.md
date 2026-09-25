@@ -30,7 +30,7 @@ Build produces `dist/`; preview serves that production build locally. No backend
 - `src/simulation/state.js`: plain JavaScript placement and day rules, independent of Phaser and browser APIs.
 - `src/style.css`: the HTML shell around the game.
 
-Only two packages are needed: Phaser for the game, Vite for serving/building it. Placeholder art is drawn directly with Phaser. A complete day lasts about 15 seconds. Each of its 120 simulation minutes can bring a visitor; demand, condition, and site cost make the busiest location an imperfect choice. Revenue is earned per use, while placement and regular cleaning are costs. The result needs at least $5 profit and 55% satisfaction. Use **Try Another Site** to compare outcomes.
+Only two packages are needed: Phaser for the game, Vite for serving/building it. Placeholder art is drawn directly with Phaser. A complete day lasts about 15 seconds. Each of its 120 simulation minutes can bring a visitor. Visitors visibly walk by, use the unit for a sale, or turn away when its condition discourages them. Demand, condition, and site cost make the busiest location an imperfect choice. Revenue is earned per use, while placement and regular cleaning are costs. The result needs at least $5 profit and 55% satisfaction. Use **Try Another Site** to compare outcomes. Run `npm.cmd test` to check the visitor accounting and day simulation.
 
 ## Small Git workflow
 

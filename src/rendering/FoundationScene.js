@@ -11,25 +11,18 @@ export class FoundationScene extends Phaser.Scene {
   create() {
     this.state = createInitialState();
     this.lastTick = 0;
-    this.walkers = [];
     this.paint();
   }
 
-  update(time, delta) {
+  update(_time, delta) {
     if (this.state.phase !== 'running') return;
     this.lastTick += delta;
-    this.walkers.forEach((person, index) => {
-      person.x += person.getData('speed') * delta / 1000;
-      if (person.x > 855) person.x = 105;
-      person.y += Math.sin(time / 380 + index) * 0.08;
-    });
     if (this.lastTick >= 125) {
       this.lastTick -= 125;
-      const previous = this.state;
       this.state = advanceMinute(this.state);
       this.updateHud();
-      if (this.state.uses > previous.uses) this.flashRevenue();
-      if (this.state.phase === 'result') this.paint();
+      if (this.state.activity) this.spawnCustomer(this.state.activity);
+      if (this.state.phase === 'result') this.time.delayedCall(1250, () => this.paint());
     }
   }
 
@@ -92,25 +85,52 @@ export class FoundationScene extends Phaser.Scene {
     g.fillStyle(0x193a40).fillCircle(x - 5, y - 3, 2);
   }
 
-  spawnWalkers() {
-    this.walkers = [];
-    const colors = [0xd97767, 0x346b91, 0xf5cb6a, 0x745c90, 0xf3eee0];
-    for (let i = 0; i < 13; i++) {
-      const x = 110 + i * 59;
-      const y = 248 + (i % 4) * 31;
-      const person = this.add.container(x, y, [
-        this.add.ellipse(0, 5, 15, 5, 0x24443a, 0.3),
-        this.add.rectangle(0, -3, 7, 12, colors[i % colors.length]),
-        this.add.circle(0, -13, 5, 0xffd4aa),
-      ]);
-      person.setData('speed', 13 + (i % 4) * 7);
-      this.walkers.push(person);
-    }
+  spawnCustomer(activity) {
+    const site = sites.find(item => item.id === this.state.site);
+    const direction = activity.visitor % 2 === 0 ? 1 : -1;
+    const x = site.x - direction * 110;
+    const y = site.y + 35;
+    const color = [0xd97767, 0x346b91, 0xf5cb6a, 0x745c90][activity.visitor % 4];
+    const person = this.add.container(x, y, [
+      this.add.ellipse(0, 5, 15, 5, 0x24443a, 0.3),
+      this.add.rectangle(0, -3, 7, 12, color),
+      this.add.circle(0, -13, 5, 0xffd4aa),
+    ]);
+    const passing = activity.type === 'pass';
+    const targetX = passing ? site.x - direction * 40 : site.x - direction * 10;
+    const targetY = passing ? site.y + 27 : site.y + 11;
+    this.tweens.add({ targets: person, x: targetX, y: targetY,
+      duration: 520, ease: 'Linear', onComplete: () => {
+        if (!person.active) return;
+        if (activity.type === 'served') {
+          this.flashRevenue();
+          person.setAlpha(0);
+          this.time.delayedCall(220, () => {
+            if (!person.active) return;
+            person.setAlpha(1);
+            this.walkAway(person, direction);
+          });
+        } else {
+          if (activity.type === 'turnedAway') this.flashOutcome(person.x, person.y - 28, 'NO SALE', '#f59b82');
+          this.walkAway(person, direction);
+        }
+      } });
+  }
+
+  walkAway(person, direction) {
+    this.tweens.add({ targets: person, x: person.x + direction * 115,
+      y: person.y + 30, alpha: 0, duration: 660,
+      onComplete: () => person.destroy() });
+  }
+
+  flashOutcome(x, y, message, color) {
+    const pop = this.label(x, y, message, 16, color).setOrigin(0.5);
+    this.tweens.add({ targets: pop, y: y - 23, alpha: 0, duration: 700,
+      onComplete: () => pop.destroy() });
   }
 
   paint() {
     this.children.removeAll(true);
-    this.walkers = [];
     this.cameras.main.setBackgroundColor(theme.colors.background);
     this.town();
     this.add.rectangle(480, 24, 960, 48, 0x193a40, 0.9);
@@ -150,7 +170,6 @@ export class FoundationScene extends Phaser.Scene {
   }
 
   runningScreen() {
-    this.spawnWalkers();
     this.add.rectangle(480, 474, 960, 132, 0x193a40, 0.96);
     this.hud = this.label(22, 424, '', 16, '#f4ca72');
     this.details = this.label(22, 454, '', 15);
@@ -165,15 +184,14 @@ export class FoundationScene extends Phaser.Scene {
     const s = this.state;
     const clock = `${String(8 + Math.floor(s.minute / 30)).padStart(2, '0')}:${s.minute % 30 < 15 ? '00' : '30'}`;
     this.hud.setText(`DAY 1  ${clock}     BANK $${s.bank}     REVENUE $${s.revenue}     COSTS $${s.costs}`);
-    this.details.setText(`Uses ${s.uses} / Visitors ${s.visitors}     Condition ${Math.round(s.condition)}%     Satisfaction ${Math.round(s.satisfaction)}%     Reputation ${s.reputation}`);
+    this.details.setText(`Served ${s.uses}  Walked by ${s.passers}  Turned away ${s.turnedAway}     Condition ${Math.round(s.condition)}%     Satisfaction ${Math.round(s.satisfaction)}%`);
     this.eventText.setText(s.events.at(-1) || 'Waiting for the first customer…');
     this.progressFill.width = 920 * s.minute / economy.dayMinutes;
   }
 
   flashRevenue() {
     const site = sites.find(item => item.id === this.state.site);
-    const pop = this.label(site.x, site.y - 72, `+$${economy.price}`, 18, '#f4ca72').setOrigin(0.5);
-    this.tweens.add({ targets: pop, y: pop.y - 26, alpha: 0, duration: 700, onComplete: () => pop.destroy() });
+    this.flashOutcome(site.x, site.y - 72, `+$${economy.price}`, '#f4ca72');
   }
 
   resultScreen() {
