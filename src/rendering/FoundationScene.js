@@ -117,6 +117,7 @@ export class FoundationScene extends Phaser.Scene {
       const landmarkY = y + (landmark?.yOffset ?? 0);
       let landmarkImage;
       let trafficGlow;
+      let imageGlow;
       if (landmark) {
         if (this.state.phase === 'planning') {
           trafficGlow = this.add.ellipse(x, landmarkY + 8, landmark.size * 0.72,
@@ -125,13 +126,16 @@ export class FoundationScene extends Phaser.Scene {
         landmarkImage = this.add.image(x, landmarkY, landmark.key)
           .setDisplaySize(landmark.size, landmark.size)
           .setAngle(0);
+        if (this.state.phase === 'planning' && landmarkImage.preFX) {
+          imageGlow = landmarkImage.preFX.addGlow(trafficTier.color, 0, 0, 1, false, 0.1, 10);
+        }
       }
       if (this.state.site === site.id) {
         this.drawUnit(g, x, y);
         if (this.state.signage) this.drawSign(g, x, y);
       }
       if (this.state.phase === 'planning') {
-        const labelY = Math.max(76, y - 122);
+        const labelY = site.id === 'market' ? 35 : Math.max(76, y - 122);
         const chooseSite = () => {
           this.state = selectSite(this.state, site.id);
           this.saveAndPaint();
@@ -141,10 +145,15 @@ export class FoundationScene extends Phaser.Scene {
           this.tweens.killTweensOf(landmarkImage);
           this.tweens.add({ targets: landmarkImage, y: landmarkY + (hovered ? -9 : 0),
             duration: 120, ease: 'Sine.out' });
+          if (imageGlow) {
+            this.tweens.killTweensOf(imageGlow);
+            this.tweens.add({ targets: imageGlow, outerStrength: hovered ? 4 : 0,
+              innerStrength: hovered ? 0.4 : 0, duration: 140, ease: 'Sine.out' });
+          }
           if (trafficGlow) {
             this.tweens.killTweensOf(trafficGlow);
-            this.tweens.add({ targets: trafficGlow, alpha: hovered ? 0.58 : 0,
-              scaleX: hovered ? 1.12 : 0.7, scaleY: hovered ? 1.12 : 0.7,
+            this.tweens.add({ targets: trafficGlow, alpha: hovered ? 0.72 : 0,
+              scaleX: hovered ? 1.28 : 0.7, scaleY: hovered ? 1.28 : 0.7,
               duration: 140, ease: 'Sine.out' });
           }
         };
