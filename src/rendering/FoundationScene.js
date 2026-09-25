@@ -118,24 +118,20 @@ export class FoundationScene extends Phaser.Scene {
       const trafficTier = trafficTiers[site.trafficTier];
       const landmarkY = y + (landmark?.yOffset ?? 0);
       let landmarkImage;
-      let trafficGlow;
-      let imageGlow;
-      let trafficBorder;
+      let trafficHalo;
       if (landmark) {
         if (this.state.phase === 'planning') {
-          trafficGlow = this.add.ellipse(x, landmarkY + 8, landmark.size * 0.72,
-            landmark.size * 0.45, trafficTier.color, 0).setScale(0.7);
-          trafficBorder = this.add.rectangle(x, landmarkY, landmark.size + 10,
-            landmark.size + 10, trafficTier.color, 0)
-            .setStrokeStyle(6, trafficTier.color, 1)
+          trafficHalo = this.add.graphics();
+          [[0.09, 0.78], [0.12, 0.66], [0.16, 0.54], [0.22, 0.42]].forEach(([alpha, scale]) => {
+            trafficHalo.fillStyle(trafficTier.color, alpha)
+              .fillCircle(x, landmarkY, landmark.size * scale);
+          });
+          trafficHalo
             .setAlpha(0);
         }
         landmarkImage = this.add.image(x, landmarkY, landmark.key)
           .setDisplaySize(landmark.size, landmark.size)
           .setAngle(0);
-        if (this.state.phase === 'planning' && landmarkImage.preFX) {
-          imageGlow = landmarkImage.preFX.addGlow(trafficTier.color, 0, 0, 1, false, 0.1, 10);
-        }
       }
       if (this.state.site === site.id) {
         this.drawUnit(g, x, y);
@@ -152,21 +148,10 @@ export class FoundationScene extends Phaser.Scene {
           this.tweens.killTweensOf(landmarkImage);
           this.tweens.add({ targets: landmarkImage, y: landmarkY + (hovered ? -9 : 0),
             duration: 120, ease: 'Sine.out' });
-          if (trafficBorder) {
-            this.tweens.killTweensOf(trafficBorder);
-            this.tweens.add({ targets: trafficBorder, y: landmarkY + (hovered ? -9 : 0),
-              alpha: hovered ? 1 : 0, duration: 120, ease: 'Sine.out' });
-          }
-          if (imageGlow) {
-            this.tweens.killTweensOf(imageGlow);
-            this.tweens.add({ targets: imageGlow, outerStrength: hovered ? 4 : 0,
-              innerStrength: hovered ? 0.4 : 0, duration: 140, ease: 'Sine.out' });
-          }
-          if (trafficGlow) {
-            this.tweens.killTweensOf(trafficGlow);
-            this.tweens.add({ targets: trafficGlow, alpha: hovered ? 0.72 : 0,
-              scaleX: hovered ? 1.28 : 0.7, scaleY: hovered ? 1.28 : 0.7,
-              duration: 140, ease: 'Sine.out' });
+          if (trafficHalo) {
+            this.tweens.killTweensOf(trafficHalo);
+            this.tweens.add({ targets: trafficHalo, y: hovered ? -9 : 0,
+              alpha: hovered ? 1 : 0, duration: 140, ease: 'Sine.out' });
           }
           const listLabel = this.siteListLabels[site.id];
           if (listLabel) {
