@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
 import { theme, sites, economy, trafficTiers } from '../content/theme.js';
+import canalRestaurants from '../assets/themes/flush-with-cash/locations/canal-restaurants-v2.png';
+import stationSteps from '../assets/themes/flush-with-cash/locations/station-steps-v1.png';
+import marketLane from '../assets/themes/flush-with-cash/locations/market-lane-v1.png';
+import pigeonPark from '../assets/themes/flush-with-cash/locations/pigeon-park-v1.png';
+import officeRow from '../assets/themes/flush-with-cash/locations/office-row-v1.png';
+import parklandBoard from '../assets/themes/flush-with-cash/boards/parkland-v1.png';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getAvailableSites, getServiceCost, getPlacementCost,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
 import { loadGame, saveGame } from '../simulation/storage.js';
@@ -9,6 +15,15 @@ const cream = '#fff4ce';
 
 export class FoundationScene extends Phaser.Scene {
   constructor() { super('game'); }
+
+  preload() {
+    this.load.image('canal-restaurants', canalRestaurants);
+    this.load.image('station-steps', stationSteps);
+    this.load.image('market-lane', marketLane);
+    this.load.image('pigeon-park', pigeonPark);
+    this.load.image('office-row', officeRow);
+    this.load.image('parkland-board', parklandBoard);
+  }
 
   init(data) {
     this.incomingState = data.state || null;
@@ -56,23 +71,24 @@ export class FoundationScene extends Phaser.Scene {
   }
 
   town() {
+    this.add.image(480, 260, 'parkland-board').setDisplaySize(900, 510);
     const g = this.add.graphics();
     const c = theme.colors;
-    this.polygon(g, [[80, 260], [480, 455], [880, 260], [480, 65]], c.groundEdge);
-    this.polygon(g, [[80, 244], [480, 439], [880, 244], [480, 49]], c.ground);
-    for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) {
-      const x = 480 + (col - row) * 50;
-      const y = 49 + (col + row) * 24.4;
-      const points = [[x, y], [x + 50, y + 24.4], [x, y + 48.8], [x - 50, y + 24.4]];
-      this.polygon(g, points, (row + col) % 2 ? c.ground : c.groundAlternate);
-      g.lineStyle(1, c.outline, 0.3).strokePoints(points.map(([px, py]) => ({ x: px, y: py })), true);
-    }
-    // Cross-town pavement gives pedestrians a clear visual route.
-    this.polygon(g, [[132, 261], [470, 407], [827, 255], [487, 110]], 0xd7d0a4);
-    this.polygon(g, [[170, 264], [470, 386], [789, 255], [487, 131]], 0xbfc49b);
-    getAvailableSites(this.state).forEach((site, index) => {
+    const landmarks = {
+      station: { key: 'station-steps', yOffset: -38, size: 132 },
+      market: { key: 'market-lane', yOffset: -25, size: 112 },
+      park: { key: 'pigeon-park', yOffset: -32, size: 125 },
+      office: { key: 'office-row', yOffset: -47, size: 145 },
+      canal: { key: 'canal-restaurants', yOffset: -42, size: 145 },
+    };
+    getAvailableSites(this.state).forEach(site => {
       const { x, y } = site;
       g.fillStyle(0x325d5b, 0.45).fillEllipse(x, y + 13, 86, 26);
+      const landmark = landmarks[site.id];
+      if (landmark) {
+        this.add.image(x, y + landmark.yOffset, landmark.key)
+          .setDisplaySize(landmark.size, landmark.size);
+      }
       if (this.state.site === site.id) {
         this.drawUnit(g, x, y);
         if (this.state.signage) this.drawSign(g, x, y);
@@ -83,12 +99,16 @@ export class FoundationScene extends Phaser.Scene {
       }
       if (this.state.phase === 'planning') {
         const trafficTier = trafficTiers[site.trafficTier];
-        this.add.circle(x + 31, y - 25, 9, trafficTier.color).setStrokeStyle(2, 0xfff4ce);
-        const marker = this.add.circle(x, y - 29, 15,
+        const markerWidth = Math.max(64, site.name.length * 8 + 18);
+        const labelY = Math.max(68, y - 130);
+        this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
+          .setStrokeStyle(2, 0xfff4ce);
+        this.add.rectangle(x, labelY, markerWidth, 26,
           this.state.selectedSite === site.id ? 0xf4ca72 : 0x244f55)
           .setStrokeStyle(2, 0xfff4ce);
-        this.label(x, y - 29, String(index + 1), 14).setOrigin(0.5);
-        // One generous hit area covers the number and the yellow placement pad.
+        this.label(x, labelY, site.name.toUpperCase(), 11,
+          this.state.selectedSite === site.id ? ink : cream).setOrigin(0.5);
+        // One generous hit area covers the location label and the yellow placement pad.
         this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => { this.state = selectSite(this.state, site.id); this.saveAndPaint(); });
       }
