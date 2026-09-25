@@ -1,5 +1,5 @@
 // Copy, site clues, and balance values live outside the simulation and renderer.
-export const economy = { startingCash: 185, price: 12, upkeep: 4, wear: 2.4,
+export const economy = { startingCash: 185, price: 12, upkeep: 4, wear: 2.4, serviceCost: 35,
   dayMinutes: 120, successProfit: 5 };
 
 export const sites = [

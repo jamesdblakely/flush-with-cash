@@ -1,6 +1,6 @@
 # Flush with Cash
 
-A small, silly browser tycoon experiment. The first-day vertical slice is playable: choose one of five sites for an inherited unit, watch the town through a short operating day, and see a retro result card.
+A small, silly browser tycoon experiment. Choose one of five sites for an inherited unit, watch the town through a short operating day, and see a retro result card. Then plan another day with the bank balance, unit condition, and reputation you earned.
 
 Design source: [Game Design & Development Handoff](https://app.notion.com/p/3e517b179e488181b31de3e6de473c6f).
 
@@ -30,7 +30,7 @@ Build produces `dist/`; preview serves that production build locally. No backend
 - `src/simulation/state.js`: plain JavaScript placement and day rules, independent of Phaser and browser APIs.
 - `src/style.css`: the HTML shell around the game.
 
-Only two packages are needed: Phaser for the game, Vite for serving/building it. Placeholder art is drawn directly with Phaser. A complete day lasts about 15 seconds. Each of its 120 simulation minutes can bring a visitor. Visitors visibly walk by, use the unit for a sale, or turn away when its condition discourages them. Demand, condition, and site cost make the busiest location an imperfect choice. Revenue is earned per use, while placement and regular cleaning are costs. The result needs at least $5 profit and 55% satisfaction. Use **Try Another Site** to compare outcomes. Run `npm.cmd test` to check the visitor accounting and day simulation.
+Only two packages are needed: Phaser for the game, Vite for serving/building it. Placeholder art is drawn directly with Phaser. A complete day lasts about 15 seconds. Each of its 120 simulation minutes can bring a visitor. Visitors visibly walk by, use the unit for a sale, or turn away when its condition discourages them. Demand, condition, and site cost make the busiest location an imperfect choice. Revenue is earned per use, while placement and regular cleaning are costs. The result needs at least $5 profit and 55% satisfaction. After results, **Plan Day** carries the bank, condition, and reputation into the next day. Service the unit for a fee before choosing a site when condition is low. If the bank can no longer cover even the cheapest permit, start a new business. Progress currently lasts for the browser session; refreshing the page begins again. Run `npm.cmd test` to check visitor accounting and day-to-day carryover.
 
 ## Small Git workflow
 

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sites, economy } from '../src/content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult } from '../src/simulation/state.js';
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
+  nextDay, serviceUnit, canAffordNextDay } from '../src/simulation/state.js';
 
 function openAt(siteId) {
   let state = createInitialState();
@@ -42,4 +43,37 @@ test('a worn-out unit loses customers who need it but does not charge them', () 
   assert.equal(state.uses, 0);
   assert.equal(state.revenue, 0);
   assert.equal(state.visitors, state.passers + state.turnedAway);
+});
+
+test('day two carries resources forward and accounts for service as a cost', () => {
+  let state = openAt('market');
+  while (state.phase === 'running') state = advanceMinute(state);
+  const endOfDay = state;
+  assert.ok(canAffordNextDay(state));
+  state = nextDay(state);
+  assert.equal(state.day, 2);
+  assert.equal(state.phase, 'planning');
+  assert.equal(state.bank, endOfDay.bank);
+  assert.equal(state.condition, endOfDay.condition);
+  assert.equal(state.reputation, endOfDay.reputation);
+  assert.equal(state.seed, endOfDay.seed);
+  assert.equal(state.uses, 0);
+  assert.equal(state.revenue, 0);
+  assert.equal(state.costs, 0);
+  state = serviceUnit(state);
+  assert.equal(state.condition, 100);
+  assert.equal(state.bank, endOfDay.bank - economy.serviceCost);
+  assert.equal(state.costs, economy.serviceCost);
+  state = placeUnit(selectSite(state, 'park'));
+  assert.equal(state.phase, 'running');
+  assert.equal(state.costs, economy.serviceCost + sites.find(site => site.id === 'park').cost);
+  while (state.phase === 'running') state = advanceMinute(state);
+  assert.equal(state.day, 2);
+  assert.equal(getResult(state).profit, state.revenue - state.costs);
+});
+
+test('a business that cannot afford any site must restart', () => {
+  const state = { ...createInitialState(), phase: 'result', bank: 0 };
+  assert.equal(canAffordNextDay(state), false);
+  assert.equal(nextDay(state), state);
 });
