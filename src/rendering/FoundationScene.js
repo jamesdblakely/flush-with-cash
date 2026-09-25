@@ -212,6 +212,10 @@ export class FoundationScene extends Phaser.Scene {
       this.button(480, 335, 230, 'CONTINUE', () => {
         this.state = this.savedState;
         this.savedState = null;
+        if (this.state.phase === 'running') {
+          this.scene.start('operating', { state: this.state });
+          return;
+        }
         this.paint();
       });
       this.button(480, 385, 230, 'NEW GAME', () => {
