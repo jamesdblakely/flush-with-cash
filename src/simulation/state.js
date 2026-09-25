@@ -4,8 +4,8 @@ export function createInitialState() {
   return { phase: 'title', day: 1, bank: economy.startingCash,
     selectedSite: null, site: null,
     minute: 0, uses: 0, revenue: 0, costs: 0, condition: 100, satisfaction: 72,
-    reputation: 50, dayStartReputation: 50, signage: false, reinforced: false, surgePricing: false,
-    visitors: 0, passers: 0, turnedAway: 0, occupiedUntil: 0, recentTurnawayUntil: 0, weekStart: false,
+    reputation: 50, dayStartReputation: 50, signage: false, reinforced: false, surgePricing: false, airFreshener: false, ventilationFan: false,
+    visitors: 0, passers: 0, turnedAway: 0, outOfServiceToday: false, occupiedUntil: 0, recentTurnawayUntil: 0, weekStart: false,
     activity: null, events: [], history: [], seed: 1847 };
 }
 
@@ -23,6 +23,10 @@ export function getServiceCost(state) {
   return economy.serviceBaseCost + damageCost + (state.reinforced ? economy.reinforcedServiceCost : 0);
 }
 
+export function getPlacementCost(state, site) {
+  return Math.max(1, Math.round(site.cost * (1 - (state.reputation - 50) / 100)));
+}
+
 export function nextDay(state) {
   if (!['result', 'upgrades'].includes(state.phase) || !canAffordNextDay(state)) return state;
   const day = state.day + 1;
@@ -30,7 +34,7 @@ export function nextDay(state) {
   return { ...state, phase: 'planning', day, weekStart, signage: weekStart ? false : state.signage,
     selectedSite: null, site: null, minute: 0, uses: 0, revenue: 0, costs: 0,
     satisfaction: 72, dayStartReputation: state.reputation,
-    visitors: 0, passers: 0, turnedAway: 0, occupiedUntil: 0, recentTurnawayUntil: 0, activity: null, events: [] };
+    visitors: 0, passers: 0, turnedAway: 0, outOfServiceToday: false, occupiedUntil: 0, recentTurnawayUntil: 0, activity: null, events: [] };
 }
 
 export function serviceUnit(state) {
@@ -64,6 +68,15 @@ export function buySurgePricing(state) {
     events: ['Surge pricing enabled: -$' + economy.surgeCost + '.'] };
 }
 
+function buyReputationUpgrade(state, property, cost, name) {
+  if (state.phase !== 'upgrades' || state[property] ||
+    state.bank - cost < Math.min(...sites.map(site => site.cost))) return state;
+  return { ...state, bank: state.bank - cost, [property]: true, events: [name + ' installed: -$' + cost + '.'] };
+}
+
+export const buyAirFreshener = state => buyReputationUpgrade(state, 'airFreshener', economy.airFreshenerCost, 'Air freshener');
+export const buyVentilationFan = state => buyReputationUpgrade(state, 'ventilationFan', economy.ventilationFanCost, 'Ventilation fan');
+
 export function selectSite(state, id) {
   if (state.phase !== 'planning' || !getAvailableSites(state).some(site => site.id === id)) return state;
   return { ...state, selectedSite: id };
@@ -71,12 +84,14 @@ export function selectSite(state, id) {
 
 export function placeUnit(state) {
   const site = getAvailableSites(state).find(item => item.id === state.selectedSite);
-  if (state.phase !== 'planning' || !site || state.bank < site.cost ||
+  const placementCost = site ? getPlacementCost(state, site) : 0;
+  if (state.phase !== 'planning' || !site || state.bank < placementCost ||
+    state.reputation < (site.minimumReputation ?? 0) ||
     state.condition < (site.minimumCondition ?? 0) ||
     (state.weekStart && state.condition < 80)) return state;
-  return { ...state, phase: 'running', site: site.id, bank: state.bank - site.cost,
-    costs: state.costs + site.cost, weekStart: false,
-    events: [...state.events, `Opened at ${site.name}. Placement: $${site.cost}.`] };
+  return { ...state, phase: 'running', site: site.id, bank: state.bank - placementCost,
+    costs: state.costs + placementCost, weekStart: false,
+    events: [...state.events, `Opened at ${site.name}. Placement: $${placementCost}.`] };
 }
 
 function random(seed) {
@@ -90,7 +105,7 @@ export function advanceMinute(state) {
   const salePrice = site.price ?? economy.price;
   const minute = state.minute + 1;
   let { seed, bank, uses, revenue, costs, condition, satisfaction, reputation,
-    visitors, passers, turnedAway, occupiedUntil = 0, recentTurnawayUntil = 0 } = state;
+    visitors, passers, turnedAway, outOfServiceToday = false, occupiedUntil = 0, recentTurnawayUntil = 0 } = state;
   let roll; [seed, roll] = random(seed);
   const traffic = site.traffic * (state.signage ? economy.signageTrafficBoost : 1);
   const arrival = roll < Math.min(1, traffic / 60);
@@ -111,6 +126,7 @@ export function advanceMinute(state) {
         costs += economy.outOfServiceFine;
         satisfaction = Math.max(0, satisfaction - 2);
         activity = { type: 'outOfService', visitor: visitors };
+        outOfServiceToday = true;
         recentTurnawayUntil = minute + economy.surgeWindow;
         events.push('Out-of-service fine: -$' + economy.outOfServiceFine + '.');
       } else if (minute < occupiedUntil) {
@@ -121,7 +137,8 @@ export function advanceMinute(state) {
         events.push('A customer found the unit occupied and turned away.');
       } else if (roll < 0.45 + condition / 200) {
         uses++;
-        const chargedPrice = Math.round(salePrice * (state.surgePricing && minute < recentTurnawayUntil ? economy.surgeMultiplier : 1));
+        const reputationRate = 0.75 + state.reputation / 200;
+        const chargedPrice = Math.round(salePrice * reputationRate * (state.surgePricing && minute < recentTurnawayUntil ? economy.surgeMultiplier : 1));
         bank += chargedPrice;
         revenue += chargedPrice;
         condition = Math.max(0, condition - economy.wear * (site.wear ?? 1) * (state.reinforced ? 1 - economy.reinforcedWearReduction : 1));
@@ -144,14 +161,17 @@ export function advanceMinute(state) {
   }
   const phase = minute >= economy.dayMinutes ? 'result' : 'running';
   if (phase === 'result') {
-    const change = Math.round((satisfaction - 72) / 8) - Math.floor(turnedAway / 5);
+    let change = Math.round((satisfaction - 72) / 8) - Math.floor(turnedAway / 5);
+    if (outOfServiceToday) change -= 8;
+    else if (change >= 0) change += (state.airFreshener ? 1 : 0) + (state.ventilationFan ? 1 : 0);
+    else change = Math.ceil(change * (1 - (state.airFreshener ? 0.25 : 0) - (state.ventilationFan ? 0.25 : 0)));
     reputation = Math.max(0, Math.min(100, reputation + Math.max(-5, Math.min(5, change))));
   }
   const history = phase === 'result' ? [...(state.history || []), {
     day: state.day, site: state.site, profit: revenue - costs,
   }] : state.history;
   return { ...state, phase, minute, bank, uses, revenue, costs, condition, satisfaction,
-    reputation, visitors, passers, turnedAway, occupiedUntil, recentTurnawayUntil, activity, seed, history,
+    reputation, visitors, passers, turnedAway, outOfServiceToday, occupiedUntil, recentTurnawayUntil, activity, seed, history,
     events: events.slice(-4) };
 }
 

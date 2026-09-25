@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sites, economy } from '../src/content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getServiceCost,
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getServiceCost, getPlacementCost,
   nextDay, serviceUnit, buySignage, canAffordNextDay, getAvailableSites } from '../src/simulation/state.js';
 import { loadGame, saveGame } from '../src/simulation/storage.js';
 
@@ -13,11 +13,8 @@ function openAt(siteId) {
 
 test('visible visitor outcomes account for every arrival and sale', () => {
   for (const site of sites) {
-    let state = openAt(site.id);
-    if (site.days) {
-      state = { ...createInitialState(), phase: 'planning', day: site.days[0], bank: 500 };
-      state = placeUnit(selectSite(state, site.id));
-    }
+    let state = { ...createInitialState(), phase: 'planning', day: site.days?.[0] ?? 1, bank: 500, reputation: 100 };
+    state = placeUnit(selectSite(state, site.id));
     let observedVisitors = 0;
     let observedSales = 0;
     while (state.phase === 'running') {
@@ -36,7 +33,7 @@ test('visible visitor outcomes account for every arrival and sale', () => {
     assert.equal(state.visitors, observedVisitors);
     assert.equal(state.uses, observedSales);
     assert.equal(state.visitors, state.uses + state.passers + state.turnedAway);
-    assert.equal(state.revenue, state.uses * (site.price ?? economy.price));
+    assert.equal(state.revenue, state.uses * Math.round((site.price ?? economy.price) * 1.25));
     assert.equal(getResult(state).profit, state.revenue - state.costs);
   }
 });
@@ -83,7 +80,7 @@ test('day two carries resources forward and accounts for service as a cost', () 
   assert.equal(state.costs, getServiceCost({ ...state, condition: endOfDay.condition, bank: endOfDay.bank }));
   state = placeUnit(selectSite(state, 'park'));
   assert.equal(state.phase, 'running');
-  assert.equal(state.costs, getServiceCost({ ...state, condition: endOfDay.condition, bank: endOfDay.bank }) + sites.find(site => site.id === 'park').cost);
+  assert.equal(state.costs, getServiceCost({ ...state, condition: endOfDay.condition, bank: endOfDay.bank }) + getPlacementCost(state, sites.find(site => site.id === 'park')));
   while (state.phase === 'running') state = advanceMinute(state);
   assert.equal(state.day, 2);
   assert.equal(getResult(state).profit, state.revenue - state.costs);
@@ -106,7 +103,7 @@ test('the high-capacity festival is offered only on Friday and Saturday', () => 
 });
 
 test('one unit must be serviced between Friday and Saturday festival days', () => {
-  let state = { ...createInitialState(), phase: 'planning', day: 5, bank: 500 };
+  let state = { ...createInitialState(), phase: 'planning', day: 5, bank: 500, reputation: 70 };
   state = placeUnit(selectSite(state, 'festival'));
   while (state.phase === 'running') state = advanceMinute(state);
   state = nextDay(state);

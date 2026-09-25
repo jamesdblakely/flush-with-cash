@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { theme, sites, economy, trafficTiers } from '../content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getAvailableSites, getServiceCost,
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getAvailableSites, getServiceCost, getPlacementCost,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
 import { loadGame, saveGame } from '../simulation/storage.js';
 
@@ -199,15 +199,18 @@ export class FoundationScene extends Phaser.Scene {
     const selected = sites.find(site => site.id === this.state.selectedSite);
     const needsService = selected?.minimumCondition && this.state.condition < selected.minimumCondition;
     const weekNeedsService = this.state.weekStart && this.state.condition < 80;
-    const upgradesComplete = this.state.signage && this.state.reinforced && this.state.surgePricing;
+    const upgradesComplete = this.state.signage && this.state.reinforced && this.state.surgePricing &&
+      this.state.airFreshener && this.state.ventilationFan;
+    const placementCost = selected ? getPlacementCost(this.state, selected) : 0;
+    const reputationBlocked = selected && this.state.reputation < (selected.minimumReputation ?? 0);
     const serviceCost = getServiceCost(this.state);
     const canService = this.state.condition < 100 &&
       this.state.bank - serviceCost >= Math.min(...sites.map(site => site.cost));
     this.add.rectangle(480, 472, 960, 136, 0x193a40, 0.96);
     this.label(22, 410, this.state.weekStart ? `WEEK ${Math.floor((this.state.day - 1) / 7) + 1}  •  START WITH A READY UNIT` : `DAY ${this.state.day}  •  CHOOSE A SITE`, 18, '#f4ca72');
-    this.label(22, 438, selected ? `${selected.name}  •  Permit $${selected.cost}` : 'Tap a site pad, number, or name below.', 16);
+    this.label(22, 438, selected ? `${selected.name}  •  Permit $${placementCost}  •  Requires rep ${selected.minimumReputation ?? 0}` : 'Tap a site pad, number, or name below.', 16);
     this.label(22, 464, `Bank $${this.state.bank}  •  Condition ${Math.round(this.state.condition)}%  •  Reputation ${this.state.reputation}`, 14);
-    this.label(22, 488, weekNeedsService ? 'New week requirement: service to at least 80% condition before opening.' : selected ? `${selected.clue}  •  Scout report: ${selected.signal}` : `Service restores condition to 100% • estimate $${serviceCost}.`, 13);
+    this.label(22, 488, weekNeedsService ? 'New week requirement: service to at least 80% condition before opening.' : reputationBlocked ? 'Reputation too low for this placement. Build trust at smaller sites first.' : selected ? `${selected.clue}  •  Scout report: ${selected.signal}` : `Service restores condition to 100% • estimate $${serviceCost}.`, 13);
     let legendX = 380;
     Object.values(trafficTiers).forEach(tier => {
       this.add.circle(legendX, 464, 6, tier.color);
@@ -224,10 +227,10 @@ export class FoundationScene extends Phaser.Scene {
         this.scene.start('upgrades', { state: this.state });
       });
     }
-    this.button(815, 483, 255, selected ? (weekNeedsService || needsService ? 'SERVICE REQUIRED' : `PLACE FOR $${selected.cost}`) : 'PICK A SITE', () => {
+    this.button(815, 483, 255, selected ? (reputationBlocked ? 'REPUTATION REQUIRED' : weekNeedsService || needsService ? 'SERVICE REQUIRED' : `PLACE FOR $${placementCost}`) : 'PICK A SITE', () => {
       const placed = placeUnit(this.state);
       if (placed.phase === 'running') this.scene.start('calendar', { state: placed });
-    }, Boolean(selected && this.state.bank >= selected.cost && !needsService && !weekNeedsService));
+    }, Boolean(selected && this.state.bank >= placementCost && !needsService && !weekNeedsService && !reputationBlocked));
     getAvailableSites(this.state).forEach((site, i) => {
       const text = this.label(20 + i * 190, 520, `${i + 1} ${site.name}`, 12,
         this.state.selectedSite === site.id ? '#f4ca72' : cream);

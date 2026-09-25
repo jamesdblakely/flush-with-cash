@@ -23,6 +23,9 @@ export function loadGame(storage) {
       weekStart: typeof state.weekStart === 'boolean' ? state.weekStart : false,
       reinforced: typeof state.reinforced === 'boolean' ? state.reinforced : false,
       surgePricing: typeof state.surgePricing === 'boolean' ? state.surgePricing : false,
+      airFreshener: typeof state.airFreshener === 'boolean' ? state.airFreshener : false,
+      ventilationFan: typeof state.ventilationFan === 'boolean' ? state.ventilationFan : false,
+      outOfServiceToday: typeof state.outOfServiceToday === 'boolean' ? state.outOfServiceToday : false,
       recentTurnawayUntil: Number.isInteger(state.recentTurnawayUntil) ? state.recentTurnawayUntil : 0, history };
   } catch {
     return null;

@@ -107,7 +107,8 @@ export class OperatingScene extends Phaser.Scene {
     this.hud.setText('DAY ' + s.day + '  BANK $' + s.bank + '  REVENUE $' + s.revenue + '  COSTS $' + s.costs);
     this.details.setText('Served ' + s.uses + '  Walked by ' + s.passers + '  Turned away ' + s.turnedAway + '  Condition ' + Math.round(s.condition) + '%');
     this.eventText.setText(s.events.at(-1) || 'Waiting for the first customer...');
-    const upgrades = [s.signage && 'SIGN', s.reinforced && 'REINFORCED', s.surgePricing && 'SURGE'].filter(Boolean);
+    const upgrades = [s.signage && 'SIGN', s.reinforced && 'REINFORCED', s.surgePricing && 'SURGE',
+      s.airFreshener && 'FRESHENER', s.ventilationFan && 'FAN'].filter(Boolean);
     this.upgradeText?.setText(upgrades.length ? 'ACTIVE: ' + upgrades.join(' • ') : 'ACTIVE: NONE');
     this.progress.width = 920 * s.minute / economy.dayMinutes;
     this.occupiedLabel.setVisible(s.minute < s.occupiedUntil);
