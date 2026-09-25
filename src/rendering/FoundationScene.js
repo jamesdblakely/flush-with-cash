@@ -99,7 +99,7 @@ export class FoundationScene extends Phaser.Scene {
       if (this.state.phase === 'planning') {
         const trafficTier = trafficTiers[site.trafficTier];
         const markerWidth = Math.max(64, site.name.length * 8 + 18);
-        const labelY = Math.max(68, y - (site.id === 'festival' ? 140 : 130));
+        const labelY = Math.max(68, y - 130);
         this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
           .setStrokeStyle(2, 0xfff4ce);
         const chooseSite = () => {
