@@ -54,4 +54,4 @@ git push -u origin main
 
 ## Next milestone
 
-Replace vector placeholders with a consistent art set, add more legible customer feedback, and playtest site and upgrade balance. The simulation still covers one unit. Saves are local to one browser and device.
+Make the town map the site-selection view only. Once the player places the unit, switch to a separate, closer street-level scene focused on the chosen site. Show the unit and pedestrians there during the operating day, with site-specific surroundings so each location feels distinct. Keep the existing customer and economy simulation connected to that street scene. Plan the camera, backgrounds, character sprites, and unit sprites together before replacing the vector placeholders. Then improve customer feedback and playtest site and upgrade balance. The simulation still covers one unit. Saves are local to one browser and device.
