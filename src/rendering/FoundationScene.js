@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { theme, sites, economy, trafficTiers } from '../content/theme.js';
-import canalRestaurants from '../assets/themes/flush-with-cash/locations/canal-restaurants-v2.png';
+import canalRestaurants from '../assets/themes/flush-with-cash/locations/canal-restaurants-v3.png';
 import stationSteps from '../assets/themes/flush-with-cash/locations/station-steps-v1.png';
 import marketLane from '../assets/themes/flush-with-cash/locations/market-lane-v1.png';
 import pigeonPark from '../assets/themes/flush-with-cash/locations/pigeon-park-v1.png';
