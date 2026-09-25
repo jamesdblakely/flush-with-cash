@@ -64,21 +64,25 @@ export class FoundationScene extends Phaser.Scene {
     return this.add.text(x, y, value, { fontFamily: 'Bungee', fontSize: `${size}px`, color, ...options });
   }
 
-  arcNameplate(x, y, value, action, selected = false, size = 10) {
-    const letters = [...value];
-    const spacing = size * 0.72;
-    const middle = (letters.length - 1) / 2;
-    letters.forEach((letter, index) => {
-      const offset = (index - middle) * spacing;
-      const curve = Math.min(4, (offset / Math.max(1, middle * spacing)) ** 2 * 4);
-      this.add.rectangle(x + offset, y + curve, spacing + 3, 23,
-        selected ? 0xf4ca72 : 0x244f55)
-        .setStrokeStyle(2, 0xfff4ce)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', action);
-      this.displayLabel(x + offset, y + curve - 1, letter, size, selected ? ink : cream)
-        .setOrigin(0.5);
-    });
+  scrollNameplate(x, y, value, action, selected = false, size = 13) {
+    const width = Math.max(88, value.length * 10 + 36);
+    const halfWidth = width / 2;
+    const plate = this.add.graphics();
+    const body = selected ? 0xf4ca72 : 0xffe1a0;
+    const shade = selected ? 0xc98b3e : 0xd29e4e;
+    plate.fillStyle(body).fillRoundedRect(x - halfWidth, y - 15, width, 30, 7);
+    plate.fillStyle(shade).fillEllipse(x - halfWidth + 3, y, 16, 34);
+    plate.fillStyle(shade).fillEllipse(x + halfWidth - 3, y, 16, 34);
+    plate.fillStyle(body).fillEllipse(x - halfWidth + 3, y - 1, 10, 27);
+    plate.fillStyle(body).fillEllipse(x + halfWidth - 3, y - 1, 10, 27);
+    plate.lineStyle(2, 0x6d4c2c).strokeRoundedRect(x - halfWidth, y - 15, width, 30, 7);
+    plate.lineStyle(1, 0xa97735)
+      .lineBetween(x - halfWidth + 12, y - 8, x + halfWidth - 12, y - 8)
+      .lineBetween(x - halfWidth + 12, y + 8, x + halfWidth - 12, y + 8);
+    this.add.zone(x, y, width + 14, 38)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', action);
+    this.displayLabel(x, y - 1, value, size, ink).setOrigin(0.5);
   }
 
   button(x, y, width, value, action, enabled = true) {
@@ -120,7 +124,7 @@ export class FoundationScene extends Phaser.Scene {
       }
       if (this.state.phase === 'planning') {
         const trafficTier = trafficTiers[site.trafficTier];
-        const markerWidth = Math.max(70, site.name.length * 9 + 24);
+        const markerWidth = Math.max(88, site.name.length * 10 + 36);
         const labelY = Math.max(76, y - 122);
         this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
           .setStrokeStyle(2, 0xfff4ce);
@@ -128,8 +132,8 @@ export class FoundationScene extends Phaser.Scene {
           this.state = selectSite(this.state, site.id);
           this.saveAndPaint();
         };
-        this.arcNameplate(x, labelY, site.name.toUpperCase(), chooseSite,
-          this.state.selectedSite === site.id, 9);
+        this.scrollNameplate(x, labelY, site.name.toUpperCase(), chooseSite,
+          this.state.selectedSite === site.id, 13);
         // The plate and a generous map target both select this location.
         this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
           .on('pointerdown', chooseSite);
