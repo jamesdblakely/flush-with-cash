@@ -5,7 +5,7 @@ import { CalendarScene } from './rendering/CalendarScene.js';
 import { UpgradeScene } from './rendering/UpgradeScene.js';
 import './style.css';
 
-new Phaser.Game({
+const startGame = () => new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: 960,
@@ -14,3 +14,5 @@ new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [FoundationScene, CalendarScene, OperatingScene, UpgradeScene],
 });
+
+document.fonts?.ready.then(startGame) || startGame();

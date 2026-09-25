@@ -60,7 +60,11 @@ export class OperatingScene extends Phaser.Scene {
   }
 
   label(x, y, text, size = 18, color = cream) {
-    return this.add.text(x, y, text, { fontFamily: 'monospace', fontSize: size + 'px', color });
+    return this.add.text(x, y, text, { fontFamily: 'DM Sans', fontSize: size + 'px', color });
+  }
+
+  displayLabel(x, y, text, size = 18, color = cream) {
+    return this.add.text(x, y, text, { fontFamily: 'Bungee', fontSize: size + 'px', color });
   }
 
   drawStreet() {
@@ -92,7 +96,7 @@ export class OperatingScene extends Phaser.Scene {
     this.outOfServiceLabel = this.label(455, 266, 'OUT OF SERVICE', 13, '#f59b82')
       .setOrigin(0.5).setVisible(false);
     this.occupiedLabel = this.label(455, 266, 'IN USE', 13, '#f59b82').setOrigin(0.5).setVisible(false);
-    this.label(480, 146, style[2], 20, '#f4ca72').setOrigin(0.5);
+    this.displayLabel(480, 146, style[2], 17, '#f4ca72').setOrigin(0.5);
     this.label(480, 170, this.site.clue, 14).setOrigin(0.5);
   }
 

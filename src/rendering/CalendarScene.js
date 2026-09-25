@@ -11,13 +11,16 @@ export class CalendarScene extends Phaser.Scene {
   init(data) { this.state = data.state; }
 
   label(x, y, text, size = 18, color = cream) {
-    return this.add.text(x, y, text, { fontFamily: 'monospace', fontSize: size + 'px', color });
+    return this.add.text(x, y, text, { fontFamily: 'DM Sans', fontSize: size + 'px', color });
+  }
+  displayLabel(x, y, text, size = 18, color = cream) {
+    return this.add.text(x, y, text, { fontFamily: 'Bungee', fontSize: size + 'px', color });
   }
 
   button(x, y, width, text, action) {
     const box = this.add.rectangle(x, y, width, 44, 0xf4ca72).setStrokeStyle(3, ink)
       .setInteractive({ useHandCursor: true });
-    this.label(x, y, text, 15, ink).setOrigin(0.5);
+    this.displayLabel(x, y, text, 14, ink).setOrigin(0.5);
     box.on('pointerdown', action);
   }
 
@@ -31,7 +34,7 @@ export class CalendarScene extends Phaser.Scene {
     const weekRevenue = weekHistory.reduce((total, day) => total + day.profit, 0);
     const site = sites.find(item => item.id === this.state.site);
 
-    this.label(480, 92, 'THE WEEK AHEAD', 28, '#f4ca72').setOrigin(0.5);
+    this.displayLabel(480, 92, 'THE WEEK AHEAD', 23, '#f4ca72').setOrigin(0.5);
     this.label(480, 126, 'WEEK ' + week + '  •  WEEKLY PROFIT SO FAR: $' + weekRevenue, 15).setOrigin(0.5);
     this.label(480, 158, 'TODAY: ' + site.name + '  •  PERMIT PAID: $' + site.cost, 14, '#b8d4bf').setOrigin(0.5);
 

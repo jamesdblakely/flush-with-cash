@@ -56,14 +56,18 @@ export class FoundationScene extends Phaser.Scene {
   }
 
   label(x, y, value, size = 18, color = cream, options = {}) {
-    return this.add.text(x, y, value, { fontFamily: 'monospace', fontSize: `${size}px`,
+    return this.add.text(x, y, value, { fontFamily: 'DM Sans', fontSize: `${size}px`,
       color, ...options });
+  }
+
+  displayLabel(x, y, value, size = 18, color = cream, options = {}) {
+    return this.add.text(x, y, value, { fontFamily: 'Bungee', fontSize: `${size}px`, color, ...options });
   }
 
   button(x, y, width, value, action, enabled = true) {
     const box = this.add.rectangle(x, y, width, 42, enabled ? 0xf4ca72 : 0x617272)
       .setStrokeStyle(2, 0x193a40);
-    this.label(x, y, value, 15, ink).setOrigin(0.5);
+    this.displayLabel(x, y, value, 14, ink).setOrigin(0.5);
     if (enabled) box.setInteractive({ useHandCursor: true }).on('pointerdown', action);
     return box;
   }
@@ -190,7 +194,7 @@ export class FoundationScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(theme.colors.background);
     this.town();
     this.add.rectangle(480, 24, 960, 48, 0x193a40, 0.9);
-    this.label(24, 12, theme.title, 24, '#f4ca72');
+    this.displayLabel(24, 12, theme.title, 22, '#f4ca72');
     if (this.state.phase === 'title') this.titleScreen();
     if (this.state.phase === 'planning') this.planningScreen();
     if (this.state.phase === 'running') this.runningScreen();
@@ -204,7 +208,7 @@ export class FoundationScene extends Phaser.Scene {
 
   titleScreen() {
     this.add.rectangle(480, 280, 580, 280, 0x193a40, 0.95).setStrokeStyle(4, 0xf4ca72);
-    this.label(480, 175, 'ONE THRONE. ONE TOWN. MANY DAYS.', 20, '#f4ca72').setOrigin(0.5);
+    this.displayLabel(480, 175, 'ONE THRONE. ONE TOWN. MANY DAYS.', 17, '#f4ca72').setOrigin(0.5);
     this.label(480, 222, theme.tagline, 15).setOrigin(0.5);
     this.label(480, 259, `Inherited: ${theme.unitName}  •  Cash: $${this.state.bank}`, 16).setOrigin(0.5);
     if (this.savedState) {
