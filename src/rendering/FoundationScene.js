@@ -64,6 +64,23 @@ export class FoundationScene extends Phaser.Scene {
     return this.add.text(x, y, value, { fontFamily: 'Bungee', fontSize: `${size}px`, color, ...options });
   }
 
+  arcNameplate(x, y, value, action, selected = false, size = 10) {
+    const letters = [...value];
+    const spacing = size * 0.72;
+    const middle = (letters.length - 1) / 2;
+    letters.forEach((letter, index) => {
+      const offset = (index - middle) * spacing;
+      const curve = Math.min(4, (offset / Math.max(1, middle * spacing)) ** 2 * 4);
+      this.add.rectangle(x + offset, y + curve, spacing + 3, 23,
+        selected ? 0xf4ca72 : 0x244f55)
+        .setStrokeStyle(2, 0xfff4ce)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', action);
+      this.displayLabel(x + offset, y + curve - 1, letter, size, selected ? ink : cream)
+        .setOrigin(0.5);
+    });
+  }
+
   button(x, y, width, value, action, enabled = true) {
     const box = this.add.rectangle(x, y, width, 42, enabled ? 0xf4ca72 : 0x617272)
       .setStrokeStyle(2, 0x193a40);
@@ -103,24 +120,17 @@ export class FoundationScene extends Phaser.Scene {
       }
       if (this.state.phase === 'planning') {
         const trafficTier = trafficTiers[site.trafficTier];
-        const markerWidth = Math.max(64, site.name.length * 8 + 18);
-        const labelY = Math.max(68, y - 130);
+        const markerWidth = Math.max(70, site.name.length * 9 + 24);
+        const labelY = Math.max(76, y - 122);
         this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
           .setStrokeStyle(2, 0xfff4ce);
         const chooseSite = () => {
           this.state = selectSite(this.state, site.id);
           this.saveAndPaint();
         };
-        const nameplate = this.add.rectangle(x, labelY, markerWidth, 26,
-          this.state.selectedSite === site.id ? 0xf4ca72 : 0x244f55)
-          .setStrokeStyle(2, 0xfff4ce)
-          .setInteractive({ useHandCursor: true })
-          .on('pointerdown', chooseSite);
-        const name = this.label(x, labelY, site.name.toUpperCase(), 11,
-          this.state.selectedSite === site.id ? ink : cream).setOrigin(0.5)
-          .setInteractive({ useHandCursor: true })
-          .on('pointerdown', chooseSite);
-        // One generous hit area covers the location label and the yellow placement pad.
+        this.arcNameplate(x, labelY, site.name.toUpperCase(), chooseSite,
+          this.state.selectedSite === site.id, 9);
+        // The plate and a generous map target both select this location.
         this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
           .on('pointerdown', chooseSite);
       }
