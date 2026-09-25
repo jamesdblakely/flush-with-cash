@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { theme, sites, economy } from '../content/theme.js';
 import { advanceMinute } from '../simulation/state.js';
 import { saveGame } from '../simulation/storage.js';
+import portableToilet from '../assets/themes/flush-with-cash/street/portable-toilet-v1.png';
+import pedestrian from '../assets/themes/flush-with-cash/street/pedestrian-v1.png';
+import canalWalkBackground from '../assets/themes/flush-with-cash/street/canal-walk-v1.png';
 
 const ink = '#193a40';
 const cream = '#fff4ce';
@@ -18,6 +21,12 @@ export class OperatingScene extends Phaser.Scene {
   constructor() { super('operating'); }
   init(data) { this.state = data.state; }
 
+  preload() {
+    this.load.image('portable-toilet', portableToilet);
+    this.load.image('pedestrian', pedestrian);
+    this.load.image('street-canal-walk', canalWalkBackground);
+  }
+
   create() {
     this.lastTick = 0;
     this.site = sites.find(site => site.id === this.state.site);
@@ -31,19 +40,22 @@ export class OperatingScene extends Phaser.Scene {
 
   drawStreet() {
     const style = styles[this.site.id];
+    if (this.site.id === 'canal') {
+      this.add.image(480, 270, 'street-canal-walk').setDisplaySize(960, 540);
+    }
     const g = this.add.graphics();
-    g.fillStyle(style[0]).fillRect(0, 0, 960, 540);
-    g.fillStyle(style[1]).fillRect(0, 180, 960, 175);
-    g.fillStyle(0xd7cfab).fillRect(0, 330, 960, 100);
-    g.fillStyle(0x486064).fillRect(0, 430, 960, 110);
-    g.lineStyle(3, 0xf1d685, 0.7);
-    for (let x = 20; x < 960; x += 70) g.lineBetween(x, 486, x + 38, 486);
-    if (this.site.id === 'park') {
-      [110, 230, 740, 860].forEach((x, i) => g.fillStyle(0x476c48).fillCircle(x, 220 + (i % 2) * 18, 48));
-    } else if (this.site.id === 'canal') {
-      g.fillStyle(0x4a9cac).fillRect(0, 200, 960, 84);
-    } else {
-      [120, 170, 135, 200, 150].forEach((height, i) => g.fillStyle(i % 2 ? 0x526c70 : 0x6d7e7e).fillRect(38 + i * 195, 180 - height, 145, height));
+    if (this.site.id !== 'canal') {
+      g.fillStyle(style[0]).fillRect(0, 0, 960, 540);
+      g.fillStyle(style[1]).fillRect(0, 180, 960, 175);
+      g.fillStyle(0xd7cfab).fillRect(0, 330, 960, 100);
+      g.fillStyle(0x486064).fillRect(0, 430, 960, 110);
+      g.lineStyle(3, 0xf1d685, 0.7);
+      for (let x = 20; x < 960; x += 70) g.lineBetween(x, 486, x + 38, 486);
+      if (this.site.id === 'park') {
+        [110, 230, 740, 860].forEach((x, i) => g.fillStyle(0x476c48).fillCircle(x, 220 + (i % 2) * 18, 48));
+      } else {
+        [120, 170, 135, 200, 150].forEach((height, i) => g.fillStyle(i % 2 ? 0x526c70 : 0x6d7e7e).fillRect(38 + i * 195, 180 - height, 145, height));
+      }
     }
     this.drawUnit(g, 455, 325);
     if (this.state.signage) this.drawSign(g, 455, 325);
@@ -57,10 +69,7 @@ export class OperatingScene extends Phaser.Scene {
   }
 
   drawUnit(g, x, y) {
-    const c = theme.colors;
-    g.fillStyle(c.assetFront).fillPoints([{ x: x - 29, y: y - 53 }, { x, y: y - 40 }, { x, y: y + 23 }, { x: x - 29, y: y + 9 }], true);
-    g.fillStyle(c.assetSide).fillPoints([{ x, y: y - 40 }, { x: x + 28, y: y - 53 }, { x: x + 28, y: y + 9 }, { x, y: y + 23 }], true);
-    g.fillStyle(c.assetRoof).fillPoints([{ x: x - 33, y: y - 57 }, { x, y: y - 73 }, { x: x + 32, y: y - 57 }, { x, y: y - 39 }], true);
+    this.add.image(x, y - 47, 'portable-toilet').setDisplaySize(105, 140);
   }
 
   drawSign(g, x, y) {
@@ -117,10 +126,9 @@ export class OperatingScene extends Phaser.Scene {
 
   spawnCustomer(activity) {
     const direction = activity.visitor % 2 ? 1 : -1;
-    const person = this.add.container(direction > 0 ? -20 : 980, 402, [
-      this.add.rectangle(0, -4, 8, 16, [0xd97767, 0x346b91, 0xf5cb6a][activity.visitor % 3]),
-      this.add.circle(0, -18, 6, 0xffd4aa),
-    ]);
+    const person = this.add.image(direction > 0 ? -20 : 980, 370, 'pedestrian')
+      .setDisplaySize(42, 64)
+      .setFlipX(direction < 0);
     const pass = activity.type === 'pass';
     if (pass) {
       this.tweens.add({ targets: person, x: direction > 0 ? 990 : -30, duration: 1100,
