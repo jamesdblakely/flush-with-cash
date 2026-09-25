@@ -9,7 +9,6 @@ import walker2 from '../assets/themes/flush-with-cash/street/walker-2-v1.png';
 import walker3 from '../assets/themes/flush-with-cash/street/walker-3-v1.png';
 import walker4 from '../assets/themes/flush-with-cash/street/walker-4-v1.png';
 import walker5 from '../assets/themes/flush-with-cash/street/walker-5-v1.png';
-import pedestrianRefusal from '../assets/themes/flush-with-cash/street/pedestrian-refusal-v1.png';
 import canalWalkBackground from '../assets/themes/flush-with-cash/street/canal-walk-v1.png';
 import stationStepsBackground from '../assets/themes/flush-with-cash/street/station-steps-v1.png';
 import marketLaneBackground from '../assets/themes/flush-with-cash/street/market-lane-v1.png';
@@ -37,7 +36,6 @@ export class OperatingScene extends Phaser.Scene {
     [walker0, walker1, walker2, walker3, walker4, walker5].forEach((walker, persona) => {
       this.load.spritesheet(`pedestrian-walker-${persona}`, walker, { frameWidth: 512, frameHeight: 512 });
     });
-    this.load.spritesheet('pedestrian-refusal', pedestrianRefusal, { frameWidth: 256, frameHeight: 256 });
     this.load.image('street-canal-walk', canalWalkBackground);
     this.load.image('street-station-steps', stationStepsBackground);
     this.load.image('street-market-lane', marketLaneBackground);

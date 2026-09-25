@@ -238,6 +238,7 @@ export class FoundationScene extends Phaser.Scene {
   }
 
   paint() {
+    this.tweens.killAll();
     this.children.removeAll(true);
     this.cameras.main.setBackgroundColor(theme.colors.background);
     this.town();
@@ -317,8 +318,10 @@ export class FoundationScene extends Phaser.Scene {
       const placed = placeUnit(this.state);
       if (placed.phase === 'running') this.scene.start('calendar', { state: placed });
     }, Boolean(selected && this.state.bank >= placementCost && !needsService && !weekNeedsService && !reputationBlocked));
-    getAvailableSites(this.state).forEach((site, i) => {
-      const listX = 20 + i * 190;
+    const availableSites = getAvailableSites(this.state);
+    const entryWidth = 920 / availableSites.length;
+    availableSites.forEach((site, i) => {
+      const listX = 20 + i * entryWidth;
       const tier = trafficTiers[site.trafficTier];
       this.add.circle(listX + 14, 520, 11, tier.color).setStrokeStyle(2, cream);
       this.label(listX + 14, 520, `${i + 1}`, 11, ink, { fontStyle: 'bold' }).setOrigin(0.5);
@@ -326,7 +329,7 @@ export class FoundationScene extends Phaser.Scene {
         this.state.selectedSite === site.id ? '#f4ca72' : cream).setOrigin(0, 0.5);
       this.siteListLabels[site.id] = text;
       const hoverSite = this.siteHoverHandlers[site.id];
-      this.add.zone(listX + 80, 520, 180, 30).setInteractive({ useHandCursor: true })
+      this.add.zone(listX + entryWidth / 2, 520, entryWidth - 4, 30).setInteractive({ useHandCursor: true })
         .on('pointerover', () => hoverSite?.(true))
         .on('pointerout', () => hoverSite?.(false))
         .on('pointerdown', () => {

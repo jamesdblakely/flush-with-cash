@@ -5,7 +5,12 @@ const key = 'flush-with-cash-save';
 export function loadGame(storage) {
   try {
     const saved = JSON.parse(storage.getItem(key));
-    const state = saved?.state;
+    let state = saved?.state;
+    // The yard is a UI overlay; resume its underlying planning/result day.
+    if (state?.phase === 'upgrades') {
+      const { upgradeReturnPhase, ...rest } = state;
+      state = { ...rest, phase: upgradeReturnPhase === 'result' ? 'result' : 'planning' };
+    }
     if (saved?.version !== 1 || !state ||
       !['planning', 'running', 'result'].includes(state.phase) ||
       !Number.isInteger(state.day) || state.day < 1 ||

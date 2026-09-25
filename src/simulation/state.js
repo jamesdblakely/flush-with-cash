@@ -55,27 +55,22 @@ export function buySignage(state) {
 }
 
 export function buyReinforced(state) {
-  if (state.phase !== 'upgrades' || state.reinforced ||
-    state.bank - economy.reinforcedCost < Math.min(...sites.map(site => site.cost))) return state;
-  return { ...state, bank: state.bank - economy.reinforcedCost, reinforced: true,
-    events: ['Reinforced structure installed: -$' + economy.reinforcedCost + '.'] };
+  return buyUpgrade(state, 'reinforced', economy.reinforcedCost, 'Reinforced structure');
 }
 
 export function buySurgePricing(state) {
-  if (state.phase !== 'upgrades' || state.surgePricing ||
-    state.bank - economy.surgeCost < Math.min(...sites.map(site => site.cost))) return state;
-  return { ...state, bank: state.bank - economy.surgeCost, surgePricing: true,
-    events: ['Surge pricing enabled: -$' + economy.surgeCost + '.'] };
+  return buyUpgrade(state, 'surgePricing', economy.surgeCost, 'Surge pricing');
 }
 
-function buyReputationUpgrade(state, property, cost, name) {
+function buyUpgrade(state, property, cost, name) {
   if (state.phase !== 'upgrades' || state[property] ||
     state.bank - cost < Math.min(...sites.map(site => site.cost))) return state;
-  return { ...state, bank: state.bank - cost, [property]: true, events: [name + ' installed: -$' + cost + '.'] };
+  return { ...state, bank: state.bank - cost, costs: state.costs + cost,
+    [property]: true, events: [name + ' installed: -$' + cost + '.'] };
 }
 
-export const buyAirFreshener = state => buyReputationUpgrade(state, 'airFreshener', economy.airFreshenerCost, 'Air freshener');
-export const buyVentilationFan = state => buyReputationUpgrade(state, 'ventilationFan', economy.ventilationFanCost, 'Ventilation fan');
+export const buyAirFreshener = state => buyUpgrade(state, 'airFreshener', economy.airFreshenerCost, 'Air freshener');
+export const buyVentilationFan = state => buyUpgrade(state, 'ventilationFan', economy.ventilationFanCost, 'Ventilation fan');
 
 export function selectSite(state, id) {
   if (state.phase !== 'planning' || !getAvailableSites(state).some(site => site.id === id)) return state;

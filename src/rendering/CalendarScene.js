@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { drawLedgerHeader } from './ledger.js';
+import { getPlacementCost } from '../simulation/state.js';
 import { sites } from '../content/theme.js';
 
 const cream = '#fff4ce';
@@ -34,13 +36,9 @@ export class CalendarScene extends Phaser.Scene {
     const site = sites.find(item => item.id === this.state.site);
 
     // A printed weekly ledger keeps the calendar consistent with the map's parchment labels.
-    this.add.rectangle(480, 270, 918, 498, 0x244f55).setStrokeStyle(3, 0xf4ca72);
-    this.add.rectangle(480, 64, 890, 62, 0x193a40).setStrokeStyle(2, 0x6d4c2c);
-    this.add.rectangle(480, 113, 860, 25, 0xffe1a0).setStrokeStyle(1, 0x6d4c2c);
-    this.displayLabel(38, 42, 'FLUSH WITH CASH', 14, '#f4ca72');
-    this.displayLabel(480, 52, `WEEK ${week} · FIELD LEDGER`, 22, '#f4ca72').setOrigin(0.5);
-    this.label(480, 89, 'Seven days to keep the books in the black.', 13, '#b8d4bf').setOrigin(0.5);
-    this.displayLabel(480, 113, `TODAY: ${site.name.toUpperCase()}  ·  PERMIT PAID $${site.cost}`, 11, ink).setOrigin(0.5);
+    drawLedgerHeader(this, `WEEK ${week} · FIELD LEDGER`,
+      'Seven days to keep the books in the black.',
+      `TODAY: ${site.name.toUpperCase()}  ·  PERMIT PAID $${getPlacementCost(this.state, site)}`);
 
     const profitFill = weekRevenue >= 0 ? 0x4f8468 : 0x965655;
     this.add.rectangle(780, 148, 250, 34, profitFill).setStrokeStyle(2, 0xfff4ce);

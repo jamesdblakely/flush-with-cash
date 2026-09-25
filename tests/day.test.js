@@ -4,6 +4,37 @@ import { sites, economy } from '../src/content/theme.js';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getServiceCost, getPlacementCost,
   nextDay, serviceUnit, buySignage, canAffordNextDay, getAvailableSites } from '../src/simulation/state.js';
 import { loadGame, saveGame } from '../src/simulation/storage.js';
+import { buyReinforced, buySurgePricing, buyAirFreshener, buyVentilationFan } from '../src/simulation/state.js';
+
+test('every upgrade records its expense once and preserves purchases across reload', () => {
+  for (const purchase of [buySignage, buyReinforced, buySurgePricing, buyAirFreshener, buyVentilationFan]) {
+    const before = { ...createInitialState(), phase: 'upgrades', bank: 500, upgradeReturnPhase: 'planning' };
+    const bought = purchase(before);
+    assert.ok(bought.bank < before.bank);
+    assert.equal(bought.costs - before.costs, before.bank - bought.bank);
+    assert.equal(purchase(bought), bought);
+    let serialized;
+    const storage = { setItem: (_key, value) => { serialized = value; }, getItem: () => serialized };
+    saveGame(storage, bought);
+    const resumed = loadGame(storage);
+    assert.equal(resumed.phase, 'planning');
+    assert.equal(resumed.bank, bought.bank);
+    assert.equal(resumed.costs, bought.costs);
+    assert.equal(purchase({ ...resumed, phase: 'upgrades' }).bank, bought.bank);
+    let day = placeUnit(selectSite(resumed, 'canal'));
+    while (day.phase === 'running') day = advanceMinute(day);
+    assert.equal(day.bank - before.bank, getResult(day).profit);
+  }
+});
+
+test('old upgrade saves recover to planning and result-origin saves preserve the day', () => {
+  let serialized;
+  const storage = { setItem: (_key, value) => { serialized = value; }, getItem: () => serialized };
+  saveGame(storage, { ...createInitialState(), phase: 'upgrades' });
+  assert.equal(loadGame(storage).phase, 'planning');
+  saveGame(storage, { ...openAt('canal'), phase: 'upgrades', upgradeReturnPhase: 'result' });
+  assert.equal(loadGame(storage).phase, 'result');
+});
 
 function openAt(siteId) {
   let state = createInitialState();

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { drawLedgerHeader } from './ledger.js';
 import { economy } from '../content/theme.js';
 import { buySignage, buyReinforced, buySurgePricing, buyAirFreshener, buyVentilationFan, nextDay } from '../simulation/state.js';
 import { saveGame } from '../simulation/storage.js';
@@ -10,7 +11,7 @@ export class UpgradeScene extends Phaser.Scene {
   constructor() { super('upgrades'); }
   init(data) {
     this.returnPhase = data.state.phase;
-    this.state = { ...data.state, phase: 'upgrades' };
+    this.state = { ...data.state, phase: 'upgrades', upgradeReturnPhase: this.returnPhase };
   }
   label(x, y, text, size = 18, color = cream, options = {}) {
     return this.add.text(x, y, text, { fontFamily: 'DM Sans', fontSize: size + 'px', color, align: 'center', ...options });
@@ -22,15 +23,10 @@ export class UpgradeScene extends Phaser.Scene {
   paint() {
     this.children.removeAll(true);
     this.cameras.main.setBackgroundColor(ink);
-    this.add.rectangle(480, 270, 918, 498, 0x244f55).setStrokeStyle(3, 0xf4ca72);
-    this.add.rectangle(480, 64, 890, 62, ink).setStrokeStyle(2, 0x6d4c2c);
-    this.add.rectangle(480, 113, 860, 25, 0xffe1a0).setStrokeStyle(1, 0x6d4c2c);
-    this.displayLabel(38, 42, 'FLUSH WITH CASH', 14, '#f4ca72');
-    this.displayLabel(480, 52, 'THE EQUIPMENT YARD', 22, '#f4ca72').setOrigin(0.5);
-    this.label(480, 89, 'Build a better throne before you open the route.', 13, '#b8d4bf').setOrigin(0.5);
-    this.displayLabel(480, 113, `AVAILABLE CASH  ·  $${this.state.bank}`, 11, ink).setOrigin(0.5);
+    drawLedgerHeader(this, 'THE EQUIPMENT YARD',
+      'Build a better throne before you open the route.', `AVAILABLE CASH  ·  $${this.state.bank}`);
     this.label(70, 148, 'WEEKLY IMPROVEMENTS', 12, '#b8d4bf').setOrigin(0, 0.5);
-    this.label(890, 148, 'OWNED UPGRADES STAY ACTIVE THIS WEEK', 10, '#b8d4bf').setOrigin(1, 0.5);
+    this.label(890, 148, 'TOWN SIGN EXPIRES WEEKLY · EQUIPMENT STAYS', 10, '#b8d4bf').setOrigin(1, 0.5);
     this.add.rectangle(480, 168, 840, 2, 0x587660);
     this.tile(110, 'MARKETING', 'TOWN SIGN', '30% more visitors this week.', economy.signageCost, this.state.signage, buySignage);
     this.tile(295, 'STRUCTURE', 'REINFORCED', '15% less wear.', economy.reinforcedCost, this.state.reinforced, buyReinforced);
@@ -48,7 +44,7 @@ export class UpgradeScene extends Phaser.Scene {
     });
   }
   tile(x, category, title, description, cost, owned, purchase) {
-    const affordable = this.state.bank - cost >= 40;
+    const affordable = !owned && purchase(this.state) !== this.state;
     const fill = owned ? 0x4f8468 : affordable ? 0x365d61 : 0x3d4a4c;
     const box = this.add.rectangle(x, 292, 166, 244, fill).setStrokeStyle(3, owned ? 0xf4ca72 : 0x6d4c2c);
     this.add.rectangle(x, 193, 144, 26, owned ? 0xf4ca72 : 0xffe1a0).setStrokeStyle(1, 0x6d4c2c);
