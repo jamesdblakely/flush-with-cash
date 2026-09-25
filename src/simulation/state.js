@@ -6,7 +6,7 @@ export function createInitialState() {
     minute: 0, uses: 0, revenue: 0, costs: 0, condition: 100, satisfaction: 72,
     reputation: 50, dayStartReputation: 50, signage: false,
     visitors: 0, passers: 0, turnedAway: 0,
-    activity: null, events: [], seed: 1847 };
+    activity: null, events: [], history: [], seed: 1847 };
 }
 
 export function canAffordNextDay(state) {
@@ -101,11 +101,23 @@ export function advanceMinute(state) {
     const change = Math.round((satisfaction - 72) / 8) - Math.floor(turnedAway / 5);
     reputation = Math.max(0, Math.min(100, reputation + Math.max(-5, Math.min(5, change))));
   }
+  const history = phase === 'result' ? [...(state.history || []), {
+    day: state.day, site: state.site, profit: revenue - costs,
+  }] : state.history;
   return { ...state, phase, minute, bank, uses, revenue, costs, condition, satisfaction,
-    reputation, visitors, passers, turnedAway, activity, seed, events: events.slice(-4) };
+    reputation, visitors, passers, turnedAway, activity, seed, history,
+    events: events.slice(-4) };
 }
 
 export function getResult(state) {
   const profit = state.revenue - state.costs;
   return { profit, success: profit >= economy.successProfit && state.satisfaction >= 55 };
+}
+
+export function getHistorySummary(state) {
+  const history = state.history || [];
+  return {
+    totalProfit: history.reduce((total, day) => total + day.profit, 0),
+    bestDay: history.reduce((best, day) => !best || day.profit > best.profit ? day : best, null),
+  };
 }

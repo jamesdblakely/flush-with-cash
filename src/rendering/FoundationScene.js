@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { theme, sites, economy } from '../content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
 import { loadGame, saveGame } from '../simulation/storage.js';
 
@@ -245,6 +245,7 @@ export class FoundationScene extends Phaser.Scene {
   resultScreen() {
     const s = this.state;
     const result = getResult(s);
+    const ledger = getHistorySummary(s);
     const canContinue = canAffordNextDay(s);
     this.add.rectangle(480, 275, 620, 395, 0x193a40, 0.97).setStrokeStyle(5, 0xf4ca72);
     // A tiny illustrated newspaper-style result: crown or rain cloud above the unit.
@@ -261,6 +262,7 @@ export class FoundationScene extends Phaser.Scene {
     this.label(480, 311, `Site: ${sites.find(site => site.id === s.site).name}   Uses: ${s.uses} / ${s.visitors} visitors`, 15).setOrigin(0.5);
     this.label(480, 340, `Revenue $${s.revenue}   Costs $${s.costs}   Profit $${result.profit}`, 15).setOrigin(0.5);
     this.label(480, 369, `Bank $${s.bank}   Condition ${Math.round(s.condition)}%   Reputation ${s.reputation} (${s.reputation - s.dayStartReputation >= 0 ? '+' : ''}${s.reputation - s.dayStartReputation})`, 15).setOrigin(0.5);
+    this.label(480, 396, `Total profit $${ledger.totalProfit}   •   Best day: ${ledger.bestDay?.day ?? s.day} ($${ledger.bestDay?.profit ?? result.profit})`, 14, '#b8d4bf').setOrigin(0.5);
     this.button(480, 427, 230, canContinue ? `PLAN DAY ${s.day + 1}` : 'START OVER', () => {
       this.state = canContinue ? nextDay(this.state) : { ...createInitialState(), phase: 'planning' };
       this.saveAndPaint();

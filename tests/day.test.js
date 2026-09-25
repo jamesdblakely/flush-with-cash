@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sites, economy } from '../src/content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../src/simulation/state.js';
 import { loadGame, saveGame } from '../src/simulation/storage.js';
 
@@ -110,4 +110,18 @@ test('a saved business resumes mid-day and rejects damaged saves', () => {
   assert.deepEqual(loadGame(storage), state);
   values.set('flush-with-cash-save', '{broken');
   assert.equal(loadGame(storage), null);
+});
+
+test('the daily ledger records each result once and totals profit across days', () => {
+  let state = openAt('market');
+  while (state.phase === 'running') state = advanceMinute(state);
+  assert.equal(state.history.length, 1);
+  assert.equal(state.history[0].profit, getResult(state).profit);
+  assert.equal(advanceMinute(state), state);
+  state = placeUnit(selectSite(nextDay(state), 'park'));
+  while (state.phase === 'running') state = advanceMinute(state);
+  assert.equal(state.history.length, 2);
+  const ledger = getHistorySummary(state);
+  assert.equal(ledger.totalProfit, state.history[0].profit + state.history[1].profit);
+  assert.equal(ledger.bestDay.profit, Math.max(...state.history.map(day => day.profit)));
 });

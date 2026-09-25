@@ -16,7 +16,10 @@ export function loadGame(storage) {
       (state.site !== null && !sites.some(site => site.id === state.site)) ||
       (state.selectedSite !== null && !sites.some(site => site.id === state.selectedSite)) ||
       (state.phase !== 'planning' && state.site === null)) return null;
-    return state;
+    const history = Array.isArray(state.history) ? state.history :
+      state.phase === 'result' ? [{ day: state.day, site: state.site,
+        profit: state.revenue - state.costs }] : [];
+    return { ...state, history };
   } catch {
     return null;
   }
