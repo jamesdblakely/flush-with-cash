@@ -1,4 +1,4 @@
-import { sites } from '../content/theme.js';
+import { sites, economy } from '../content/theme.js';
 
 const key = 'flush-with-cash-save';
 
@@ -16,11 +16,20 @@ export function loadGame(storage) {
       !Number.isInteger(state.day) || state.day < 1 ||
       !Number.isFinite(state.bank) || !Number.isFinite(state.condition) ||
       !Number.isFinite(state.reputation) || !Number.isFinite(state.minute) ||
+      !['condition', 'reputation', 'satisfaction'].every(field =>
+        Number.isFinite(state[field]) && state[field] >= 0 && state[field] <= 100) ||
+      !['uses', 'visitors', 'passers', 'turnedAway', 'minute'].every(field =>
+        Number.isInteger(state[field]) && state[field] >= 0) ||
+      state.minute > economy.dayMinutes ||
+      !['revenue', 'costs'].every(field => Number.isFinite(state[field]) && state[field] >= 0) ||
       !Number.isInteger(state.seed) || typeof state.signage !== 'boolean' ||
       !Array.isArray(state.events) ||
       (state.site !== null && !sites.some(site => site.id === state.site)) ||
       (state.selectedSite !== null && !sites.some(site => site.id === state.selectedSite)) ||
       (state.phase !== 'planning' && state.site === null)) return null;
+    if (state.history !== undefined && (!Array.isArray(state.history) ||
+      !state.history.every(entry => entry && Number.isInteger(entry.day) && entry.day >= 1 &&
+        entry.day <= state.day && Number.isFinite(entry.profit) && sites.some(site => site.id === entry.site)))) return null;
     const history = Array.isArray(state.history) ? state.history :
       state.phase === 'result' ? [{ day: state.day, site: state.site,
         profit: state.revenue - state.costs }] : [];

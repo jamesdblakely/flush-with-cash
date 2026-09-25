@@ -145,6 +145,7 @@ export function advanceMinute(state) {
         turnedAway++;
         satisfaction = Math.max(0, satisfaction - 1.4);
         activity = { type: 'turnedAway', visitor: visitors };
+        recentTurnawayUntil = minute + economy.surgeWindow;
         events.push('A customer turned away from the unit.');
       }
     }
