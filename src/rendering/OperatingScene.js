@@ -4,6 +4,8 @@ import { advanceMinute } from '../simulation/state.js';
 import { saveGame } from '../simulation/storage.js';
 import portableToilet from '../assets/themes/flush-with-cash/street/portable-toilet-v1.png';
 import pedestrianWalk from '../assets/themes/flush-with-cash/street/pedestrian-walk-v1.png';
+import pedestrianVariety from '../assets/themes/flush-with-cash/street/pedestrian-variety-v1.png';
+import pedestrianRefusal from '../assets/themes/flush-with-cash/street/pedestrian-refusal-v1.png';
 import canalWalkBackground from '../assets/themes/flush-with-cash/street/canal-walk-v1.png';
 
 const ink = '#193a40';
@@ -24,6 +26,8 @@ export class OperatingScene extends Phaser.Scene {
   preload() {
     this.load.image('portable-toilet', portableToilet);
     this.load.spritesheet('pedestrian-walk', pedestrianWalk, { frameWidth: 512, frameHeight: 512 });
+    this.load.spritesheet('pedestrian-variety', pedestrianVariety, { frameWidth: 512, frameHeight: 512 });
+    this.load.spritesheet('pedestrian-refusal', pedestrianRefusal, { frameWidth: 256, frameHeight: 256 });
     this.load.image('street-canal-walk', canalWalkBackground);
   }
 
@@ -129,10 +133,15 @@ export class OperatingScene extends Phaser.Scene {
 
   spawnCustomer(activity) {
     const direction = activity.visitor % 2 ? 1 : -1;
-    const person = this.add.sprite(direction > 0 ? -20 : 980, 370, 'pedestrian-walk')
-      .setDisplaySize(42, 64)
-      .setFlipX(direction < 0)
-      .play('pedestrian-walk');
+    const persona = activity.visitor % 6;
+    const person = persona === 0
+      ? this.add.sprite(direction > 0 ? -20 : 980, 370, 'pedestrian-walk').play('pedestrian-walk')
+      : this.add.sprite(direction > 0 ? -20 : 980, 370, 'pedestrian-variety', persona);
+    person.setDisplaySize(42, 64).setFlipX(direction < 0);
+    person.persona = persona;
+    if (persona !== 0) {
+      person.walkBob = this.tweens.add({ targets: person, y: 367, duration: 140, yoyo: true, repeat: -1 });
+    }
     const pass = activity.type === 'pass';
     if (pass) {
       this.tweens.add({ targets: person, x: direction > 0 ? 990 : -30, duration: 1100,
@@ -141,6 +150,7 @@ export class OperatingScene extends Phaser.Scene {
     }
     const entranceX = 455 - direction * 42;
     this.tweens.add({ targets: person, x: entranceX, duration: 480, onComplete: () => {
+      person.walkBob?.stop();
       this.tweens.add({ targets: person, y: 347, duration: 300, onComplete: () => {
         this.interactWithUnit(person, activity, direction);
       } });
@@ -149,8 +159,10 @@ export class OperatingScene extends Phaser.Scene {
 
   interactWithUnit(person, activity, direction) {
     if (!person.active) return;
-    person.anims.stop();
-    person.setFrame(5);
+    if (person.persona === 0) {
+      person.anims.stop();
+      person.setFrame(5);
+    }
     this.time.delayedCall(150, () => this.resolveInteraction(person, activity, direction));
   }
 
@@ -167,13 +179,29 @@ export class OperatingScene extends Phaser.Scene {
       });
       return;
     }
+    this.playRefusal(person, activity, direction);
+  }
+
+  playRefusal(person, activity, direction) {
+    person.walkBob?.stop();
+    person.anims.stop();
+    person.setTexture('pedestrian-refusal');
+    person.setFrame(person.persona);
     this.flash(person.x, 320, activity.type === 'occupied' ? 'OCCUPIED' :
       activity.type === 'outOfService' ? 'OUT OF SERVICE' : 'NO SALE', '#f59b82');
-    this.exitCustomer(person, direction);
+    let stage = 0;
+    this.time.addEvent({ delay: 170, repeat: 2, callback: () => {
+      stage += 1;
+      if (person.active) person.setFrame(person.persona + stage * 6);
+    } });
+    this.time.delayedCall(1050, () => {
+      if (person.active) this.exitCustomer(person, direction);
+    });
   }
 
   exitCustomer(person, direction) {
-    person.play('pedestrian-walk');
+    person.walkBob?.stop();
+    if (person.texture.key === 'pedestrian-walk') person.play('pedestrian-walk');
     this.tweens.add({ targets: person, y: 402, duration: 300, onComplete: () => {
       if (!person.active) return;
       this.tweens.add({ targets: person, x: direction > 0 ? 990 : -30, alpha: 0, duration: 650,
