@@ -5,6 +5,7 @@ import stationSteps from '../assets/themes/flush-with-cash/locations/station-ste
 import marketLane from '../assets/themes/flush-with-cash/locations/market-lane-v1.png';
 import pigeonPark from '../assets/themes/flush-with-cash/locations/pigeon-park-v1.png';
 import officeRow from '../assets/themes/flush-with-cash/locations/office-row-v1.png';
+import weekendConcert from '../assets/themes/flush-with-cash/locations/weekend-concert-v1.png';
 import parklandBoard from '../assets/themes/flush-with-cash/boards/parkland-v1.png';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getAvailableSites, getServiceCost, getPlacementCost,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
@@ -22,6 +23,7 @@ export class FoundationScene extends Phaser.Scene {
     this.load.image('market-lane', marketLane);
     this.load.image('pigeon-park', pigeonPark);
     this.load.image('office-row', officeRow);
+    this.load.image('weekend-concert', weekendConcert);
     this.load.image('parkland-board', parklandBoard);
   }
 
@@ -80,6 +82,7 @@ export class FoundationScene extends Phaser.Scene {
       park: { key: 'pigeon-park', yOffset: -32, size: 125 },
       office: { key: 'office-row', yOffset: -47, size: 145 },
       canal: { key: 'canal-restaurants', yOffset: -42, size: 145 },
+      festival: { key: 'weekend-concert', yOffset: -40, size: 140 },
     };
     getAvailableSites(this.state).forEach(site => {
       const { x, y } = site;
@@ -96,7 +99,7 @@ export class FoundationScene extends Phaser.Scene {
       if (this.state.phase === 'planning') {
         const trafficTier = trafficTiers[site.trafficTier];
         const markerWidth = Math.max(64, site.name.length * 8 + 18);
-        const labelY = Math.max(68, y - 130);
+        const labelY = Math.max(68, y - (site.id === 'festival' ? 170 : 130));
         this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
           .setStrokeStyle(2, 0xfff4ce);
         const chooseSite = () => {
