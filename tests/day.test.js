@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { sites, economy } from '../src/content/theme.js';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../src/simulation/state.js';
+import { loadGame, saveGame } from '../src/simulation/storage.js';
 
 function openAt(siteId) {
   let state = createInitialState();
@@ -94,4 +95,19 @@ test('town sign costs cash once, brings more visitors, and carries into later da
   assert.equal(signedDay.costs - normalDay.costs, economy.signageCost);
   assert.equal(nextDay(signedDay).signage, true);
   assert.equal(nextDay(signedDay).costs, 0);
+});
+
+test('a saved business resumes mid-day and rejects damaged saves', () => {
+  const values = new Map();
+  const storage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+  };
+  assert.equal(loadGame(storage), null);
+  let state = placeUnit(selectSite(buySignage({ ...createInitialState(), phase: 'planning' }), 'market'));
+  state = advanceMinute(state);
+  saveGame(storage, state);
+  assert.deepEqual(loadGame(storage), state);
+  values.set('flush-with-cash-save', '{broken');
+  assert.equal(loadGame(storage), null);
 });

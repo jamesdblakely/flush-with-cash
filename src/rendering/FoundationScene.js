@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { theme, sites, economy } from '../content/theme.js';
 import { createInitialState, selectSite, placeUnit, advanceMinute, getResult,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
+import { loadGame, saveGame } from '../simulation/storage.js';
 
 const ink = '#193a40';
 const cream = '#fff4ce';
@@ -10,6 +11,7 @@ export class FoundationScene extends Phaser.Scene {
   constructor() { super('game'); }
 
   create() {
+    this.savedState = loadGame(localStorage);
     this.state = createInitialState();
     this.lastTick = 0;
     this.paint();
@@ -21,6 +23,7 @@ export class FoundationScene extends Phaser.Scene {
     if (this.lastTick >= 125) {
       this.lastTick -= 125;
       this.state = advanceMinute(this.state);
+      saveGame(localStorage, this.state);
       this.updateHud();
       if (this.state.activity) this.spawnCustomer(this.state.activity);
       if (this.state.phase === 'result') this.time.delayedCall(1250, () => this.paint());
@@ -77,7 +80,7 @@ export class FoundationScene extends Phaser.Scene {
         this.label(x, y - 29, String(index + 1), 14).setOrigin(0.5);
         // One generous hit area covers the number and the yellow placement pad.
         this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { this.state = selectSite(this.state, site.id); this.paint(); });
+          .on('pointerdown', () => { this.state = selectSite(this.state, site.id); this.saveAndPaint(); });
       }
     });
   }
@@ -154,14 +157,32 @@ export class FoundationScene extends Phaser.Scene {
     if (this.state.phase === 'result') this.resultScreen();
   }
 
+  saveAndPaint() {
+    saveGame(localStorage, this.state);
+    this.paint();
+  }
+
   titleScreen() {
     this.add.rectangle(480, 280, 580, 280, 0x193a40, 0.95).setStrokeStyle(4, 0xf4ca72);
     this.label(480, 175, 'ONE THRONE. ONE TOWN. MANY DAYS.', 20, '#f4ca72').setOrigin(0.5);
     this.label(480, 222, theme.tagline, 15).setOrigin(0.5);
     this.label(480, 259, `Inherited: ${theme.unitName}  •  Cash: $${this.state.bank}`, 16).setOrigin(0.5);
-    this.button(480, 336, 230, 'START YOUR EMPIRE', () => {
-      this.state = { ...this.state, phase: 'planning' }; this.paint();
-    });
+    if (this.savedState) {
+      this.label(480, 290, `Saved game: Day ${this.savedState.day}  •  Bank $${this.savedState.bank}`, 14).setOrigin(0.5);
+      this.button(480, 335, 230, 'CONTINUE', () => {
+        this.state = this.savedState;
+        this.savedState = null;
+        this.paint();
+      });
+      this.button(480, 385, 230, 'NEW GAME', () => {
+        this.state = { ...createInitialState(), phase: 'planning' };
+        this.saveAndPaint();
+      });
+    } else {
+      this.button(480, 336, 230, 'START YOUR EMPIRE', () => {
+        this.state = { ...this.state, phase: 'planning' }; this.saveAndPaint();
+      });
+    }
   }
 
   planningScreen() {
@@ -178,20 +199,20 @@ export class FoundationScene extends Phaser.Scene {
     const serviceLabel = this.state.condition >= 100 ? 'UNIT READY' :
       canService ? `SERVICE UNIT $${economy.serviceCost}` : 'NEED CASH TO SERVICE';
     this.button(815, 432, 255, serviceLabel, () => {
-      this.state = serviceUnit(this.state); this.paint();
+      this.state = serviceUnit(this.state); this.saveAndPaint();
     }, canService);
     this.button(815, 381, 255, this.state.signage ? 'TOWN SIGN INSTALLED' :
       canBuySignage ? `BUY TOWN SIGN $${economy.signageCost}` : 'NEED CASH FOR SIGN', () => {
-      this.state = buySignage(this.state); this.paint();
+      this.state = buySignage(this.state); this.saveAndPaint();
     }, canBuySignage);
     this.button(815, 483, 255, selected ? `PLACE FOR $${selected.cost}` : 'PICK A SITE', () => {
-      this.state = placeUnit(this.state); this.paint();
+      this.state = placeUnit(this.state); this.saveAndPaint();
     }, Boolean(selected && this.state.bank >= selected.cost));
     sites.forEach((site, i) => {
       const text = this.label(20 + i * 190, 520, `${i + 1} ${site.name}`, 12,
         this.state.selectedSite === site.id ? '#f4ca72' : cream);
       text.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-        this.state = selectSite(this.state, site.id); this.paint();
+        this.state = selectSite(this.state, site.id); this.saveAndPaint();
       });
     });
   }
@@ -242,7 +263,7 @@ export class FoundationScene extends Phaser.Scene {
     this.label(480, 369, `Bank $${s.bank}   Condition ${Math.round(s.condition)}%   Reputation ${s.reputation} (${s.reputation - s.dayStartReputation >= 0 ? '+' : ''}${s.reputation - s.dayStartReputation})`, 15).setOrigin(0.5);
     this.button(480, 427, 230, canContinue ? `PLAN DAY ${s.day + 1}` : 'START OVER', () => {
       this.state = canContinue ? nextDay(this.state) : { ...createInitialState(), phase: 'planning' };
-      this.paint();
+      this.saveAndPaint();
     });
   }
 }
