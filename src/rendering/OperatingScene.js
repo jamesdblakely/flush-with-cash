@@ -11,6 +11,11 @@ import walker4 from '../assets/themes/flush-with-cash/street/walker-4-v1.png';
 import walker5 from '../assets/themes/flush-with-cash/street/walker-5-v1.png';
 import pedestrianRefusal from '../assets/themes/flush-with-cash/street/pedestrian-refusal-v1.png';
 import canalWalkBackground from '../assets/themes/flush-with-cash/street/canal-walk-v1.png';
+import stationStepsBackground from '../assets/themes/flush-with-cash/street/station-steps-v1.png';
+import marketLaneBackground from '../assets/themes/flush-with-cash/street/market-lane-v1.png';
+import pigeonParkBackground from '../assets/themes/flush-with-cash/street/pigeon-park-v1.png';
+import officeRowBackground from '../assets/themes/flush-with-cash/street/office-row-v1.png';
+import weekendFestivalBackground from '../assets/themes/flush-with-cash/street/weekend-festival-v1.png';
 
 const ink = '#193a40';
 const cream = '#fff4ce';
@@ -34,6 +39,11 @@ export class OperatingScene extends Phaser.Scene {
     });
     this.load.spritesheet('pedestrian-refusal', pedestrianRefusal, { frameWidth: 256, frameHeight: 256 });
     this.load.image('street-canal-walk', canalWalkBackground);
+    this.load.image('street-station-steps', stationStepsBackground);
+    this.load.image('street-market-lane', marketLaneBackground);
+    this.load.image('street-pigeon-park', pigeonParkBackground);
+    this.load.image('street-office-row', officeRowBackground);
+    this.load.image('street-weekend-festival', weekendFestivalBackground);
   }
 
   create() {
@@ -55,11 +65,14 @@ export class OperatingScene extends Phaser.Scene {
 
   drawStreet() {
     const style = styles[this.site.id];
-    if (this.site.id === 'canal') {
-      this.add.image(480, 270, 'street-canal-walk').setDisplaySize(960, 540);
-    }
+    const backgrounds = {
+      station: 'street-station-steps', market: 'street-market-lane', park: 'street-pigeon-park',
+      office: 'street-office-row', canal: 'street-canal-walk', festival: 'street-weekend-festival',
+    };
+    const background = backgrounds[this.site.id];
+    if (background) this.add.image(480, 270, background).setDisplaySize(960, 540);
     const g = this.add.graphics();
-    if (this.site.id !== 'canal') {
+    if (!background) {
       g.fillStyle(style[0]).fillRect(0, 0, 960, 540);
       g.fillStyle(style[1]).fillRect(0, 180, 960, 175);
       g.fillStyle(0xd7cfab).fillRect(0, 330, 960, 100);
