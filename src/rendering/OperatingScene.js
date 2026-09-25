@@ -185,28 +185,24 @@ export class OperatingScene extends Phaser.Scene {
 
   playRefusal(person, activity, direction) {
     person.anims.stop();
-    person.setTexture('pedestrian-refusal');
-    person.setScale(0.45);
-    person.setFrame(person.persona);
+    person.setTint(0xff7777);
+    const fist = this.add.text(person.x + direction * 30, person.y - 45, '✊', {
+      fontFamily: 'sans-serif', fontSize: '28px', color: '#f59b82',
+    }).setOrigin(0.5);
+    this.tweens.add({ targets: fist, x: fist.x + direction * 5, angle: direction * 10,
+      duration: 110, yoyo: true, repeat: 5 });
     this.flash(person.x, 320, activity.type === 'occupied' ? 'OCCUPIED' :
       activity.type === 'outOfService' ? 'OUT OF SERVICE' : 'NO SALE', '#f59b82');
-    let stage = 0;
-    this.time.addEvent({ delay: 170, repeat: 1, callback: () => {
-      stage += 1;
-      if (person.active) person.setFrame(person.persona + stage * 6);
-    } });
     const bubble = this.add.container(person.x, person.y - 68, [
       this.add.ellipse(0, 0, 62, 30, 0xfff4ce).setStrokeStyle(2, 0x193a40),
       this.label(0, -8, '%#!#@', 13, ink).setOrigin(0.5),
     ]).setAlpha(0);
     this.time.delayedCall(340, () => bubble.setAlpha(1));
     this.time.delayedCall(950, () => {
+      fist.destroy();
       bubble.destroy();
       if (!person.active) return;
-      person.setTexture(`pedestrian-walker-${person.persona}`, 0)
-        .setScale(0.2)
-        .setFlipX(direction < 0)
-        .play(`walk-persona-${person.persona}`);
+      person.clearTint().play(`walk-persona-${person.persona}`);
       this.exitCustomer(person, direction);
     });
   }
