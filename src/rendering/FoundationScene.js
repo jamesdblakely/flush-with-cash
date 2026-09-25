@@ -113,8 +113,16 @@ export class FoundationScene extends Phaser.Scene {
     getAvailableSites(this.state).forEach(site => {
       const { x, y } = site;
       const landmark = landmarks[site.id];
+      const trafficTier = trafficTiers[site.trafficTier];
+      const landmarkY = y + (landmark?.yOffset ?? 0);
+      let landmarkImage;
+      let trafficGlow;
       if (landmark) {
-        this.add.image(x, y + landmark.yOffset, landmark.key)
+        if (this.state.phase === 'planning') {
+          trafficGlow = this.add.ellipse(x, landmarkY + 8, landmark.size * 0.72,
+            landmark.size * 0.45, trafficTier.color, 0).setScale(0.7);
+        }
+        landmarkImage = this.add.image(x, landmarkY, landmark.key)
           .setDisplaySize(landmark.size, landmark.size)
           .setAngle(0);
       }
@@ -123,20 +131,32 @@ export class FoundationScene extends Phaser.Scene {
         if (this.state.signage) this.drawSign(g, x, y);
       }
       if (this.state.phase === 'planning') {
-        const trafficTier = trafficTiers[site.trafficTier];
-        const markerWidth = Math.max(88, site.name.length * 10 + 36);
         const labelY = Math.max(76, y - 122);
-        this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
-          .setStrokeStyle(2, 0xfff4ce);
         const chooseSite = () => {
           this.state = selectSite(this.state, site.id);
           this.saveAndPaint();
         };
+        const setHovered = hovered => {
+          if (!landmarkImage) return;
+          this.tweens.killTweensOf(landmarkImage);
+          this.tweens.add({ targets: landmarkImage, y: landmarkY + (hovered ? -9 : 0),
+            duration: 120, ease: 'Sine.out' });
+          if (trafficGlow) {
+            this.tweens.killTweensOf(trafficGlow);
+            this.tweens.add({ targets: trafficGlow, alpha: hovered ? 0.58 : 0,
+              scaleX: hovered ? 1.12 : 0.7, scaleY: hovered ? 1.12 : 0.7,
+              duration: 140, ease: 'Sine.out' });
+          }
+        };
         this.scrollNameplate(x, labelY, site.name.toUpperCase(), chooseSite,
           this.state.selectedSite === site.id, 13);
-        // The plate and a generous map target both select this location.
-        this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
-          .on('pointerdown', chooseSite);
+        if (landmark) {
+          this.add.zone(x, landmarkY, landmark.size, landmark.size)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerover', () => setHovered(true))
+            .on('pointerout', () => setHovered(false))
+            .on('pointerdown', chooseSite);
+        }
       }
     });
     // Keep the selection board airy without shrinking the UI that follows it.
@@ -284,9 +304,13 @@ export class FoundationScene extends Phaser.Scene {
       if (placed.phase === 'running') this.scene.start('calendar', { state: placed });
     }, Boolean(selected && this.state.bank >= placementCost && !needsService && !weekNeedsService && !reputationBlocked));
     getAvailableSites(this.state).forEach((site, i) => {
-      const text = this.label(20 + i * 190, 520, `${i + 1} ${site.name}`, 12,
+      const listX = 20 + i * 190;
+      const tier = trafficTiers[site.trafficTier];
+      this.add.circle(listX + 8, 520, 11, tier.color).setStrokeStyle(2, cream);
+      this.label(listX + 8, 520, `${i + 1}`, 11, ink, { fontStyle: 'bold' }).setOrigin(0.5);
+      const text = this.label(listX + 25, 520, site.name, 12,
         this.state.selectedSite === site.id ? '#f4ca72' : cream);
-      text.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+      this.add.zone(listX + 75, 520, 170, 28).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         this.state = selectSite(this.state, site.id); this.saveAndPaint();
       });
     });
