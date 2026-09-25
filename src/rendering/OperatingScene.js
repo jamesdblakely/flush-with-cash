@@ -143,7 +143,7 @@ export class OperatingScene extends Phaser.Scene {
     const direction = activity.visitor % 2 ? 1 : -1;
     const persona = activity.visitor % 6;
     const person = this.add.sprite(direction > 0 ? -20 : 980, 370, `pedestrian-walker-${persona}`, 0)
-      .setDisplaySize(72, 104)
+      .setScale(0.2)
       .setFlipX(direction < 0)
       .play(`walk-persona-${persona}`);
     person.persona = persona;
@@ -186,17 +186,28 @@ export class OperatingScene extends Phaser.Scene {
   playRefusal(person, activity, direction) {
     person.anims.stop();
     person.setTexture('pedestrian-refusal');
-    person.setDisplaySize(72, 104);
+    person.setScale(0.45);
     person.setFrame(person.persona);
     this.flash(person.x, 320, activity.type === 'occupied' ? 'OCCUPIED' :
       activity.type === 'outOfService' ? 'OUT OF SERVICE' : 'NO SALE', '#f59b82');
     let stage = 0;
-    this.time.addEvent({ delay: 170, repeat: 2, callback: () => {
+    this.time.addEvent({ delay: 170, repeat: 1, callback: () => {
       stage += 1;
       if (person.active) person.setFrame(person.persona + stage * 6);
     } });
-    this.time.delayedCall(1050, () => {
-      if (person.active) this.exitCustomer(person, direction);
+    const bubble = this.add.container(person.x, person.y - 68, [
+      this.add.ellipse(0, 0, 62, 30, 0xfff4ce).setStrokeStyle(2, 0x193a40),
+      this.label(0, -8, '%#!#@', 13, ink).setOrigin(0.5),
+    ]).setAlpha(0);
+    this.time.delayedCall(340, () => bubble.setAlpha(1));
+    this.time.delayedCall(950, () => {
+      bubble.destroy();
+      if (!person.active) return;
+      person.setTexture(`pedestrian-walker-${person.persona}`, 0)
+        .setScale(0.2)
+        .setFlipX(direction < 0)
+        .play(`walk-persona-${person.persona}`);
+      this.exitCustomer(person, direction);
     });
   }
 
