@@ -99,6 +99,8 @@ export class FoundationScene extends Phaser.Scene {
 
   town() {
     const townStart = this.children.list.length;
+    this.siteHoverHandlers = {};
+    this.siteListLabels = {};
     this.add.image(480, 260, 'parkland-board').setDisplaySize(900, 510);
     const g = this.add.graphics();
     const c = theme.colors;
@@ -118,10 +120,15 @@ export class FoundationScene extends Phaser.Scene {
       let landmarkImage;
       let trafficGlow;
       let imageGlow;
+      let trafficBorder;
       if (landmark) {
         if (this.state.phase === 'planning') {
           trafficGlow = this.add.ellipse(x, landmarkY + 8, landmark.size * 0.72,
             landmark.size * 0.45, trafficTier.color, 0).setScale(0.7);
+          trafficBorder = this.add.rectangle(x, landmarkY, landmark.size + 10,
+            landmark.size + 10, trafficTier.color, 0)
+            .setStrokeStyle(6, trafficTier.color, 1)
+            .setAlpha(0);
         }
         landmarkImage = this.add.image(x, landmarkY, landmark.key)
           .setDisplaySize(landmark.size, landmark.size)
@@ -145,6 +152,11 @@ export class FoundationScene extends Phaser.Scene {
           this.tweens.killTweensOf(landmarkImage);
           this.tweens.add({ targets: landmarkImage, y: landmarkY + (hovered ? -9 : 0),
             duration: 120, ease: 'Sine.out' });
+          if (trafficBorder) {
+            this.tweens.killTweensOf(trafficBorder);
+            this.tweens.add({ targets: trafficBorder, y: landmarkY + (hovered ? -9 : 0),
+              alpha: hovered ? 1 : 0, duration: 120, ease: 'Sine.out' });
+          }
           if (imageGlow) {
             this.tweens.killTweensOf(imageGlow);
             this.tweens.add({ targets: imageGlow, outerStrength: hovered ? 4 : 0,
@@ -156,7 +168,15 @@ export class FoundationScene extends Phaser.Scene {
               scaleX: hovered ? 1.28 : 0.7, scaleY: hovered ? 1.28 : 0.7,
               duration: 140, ease: 'Sine.out' });
           }
+          const listLabel = this.siteListLabels[site.id];
+          if (listLabel) {
+            listLabel.setColor(hovered || this.state.selectedSite === site.id ? '#f4ca72' : cream);
+            this.tweens.killTweensOf(listLabel);
+            this.tweens.add({ targets: listLabel, scaleX: hovered ? 1.08 : 1,
+              scaleY: hovered ? 1.08 : 1, duration: 120, ease: 'Sine.out' });
+          }
         };
+        this.siteHoverHandlers[site.id] = setHovered;
         this.scrollNameplate(x, labelY, site.name.toUpperCase(), chooseSite,
           this.state.selectedSite === site.id, 13);
         if (landmark) {
@@ -315,13 +335,18 @@ export class FoundationScene extends Phaser.Scene {
     getAvailableSites(this.state).forEach((site, i) => {
       const listX = 20 + i * 190;
       const tier = trafficTiers[site.trafficTier];
-      this.add.circle(listX + 8, 520, 11, tier.color).setStrokeStyle(2, cream);
-      this.label(listX + 8, 520, `${i + 1}`, 11, ink, { fontStyle: 'bold' }).setOrigin(0.5);
-      const text = this.label(listX + 25, 520, site.name, 12,
-        this.state.selectedSite === site.id ? '#f4ca72' : cream);
-      this.add.zone(listX + 75, 520, 170, 28).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
-        this.state = selectSite(this.state, site.id); this.saveAndPaint();
-      });
+      this.add.circle(listX + 14, 520, 11, tier.color).setStrokeStyle(2, cream);
+      this.label(listX + 14, 520, `${i + 1}`, 11, ink, { fontStyle: 'bold' }).setOrigin(0.5);
+      const text = this.label(listX + 31, 520, site.name, 12,
+        this.state.selectedSite === site.id ? '#f4ca72' : cream).setOrigin(0, 0.5);
+      this.siteListLabels[site.id] = text;
+      const hoverSite = this.siteHoverHandlers[site.id];
+      this.add.zone(listX + 80, 520, 180, 30).setInteractive({ useHandCursor: true })
+        .on('pointerover', () => hoverSite?.(true))
+        .on('pointerout', () => hoverSite?.(false))
+        .on('pointerdown', () => {
+          this.state = selectSite(this.state, site.id); this.saveAndPaint();
+        });
     });
   }
 
