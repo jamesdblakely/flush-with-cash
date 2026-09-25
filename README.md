@@ -1,6 +1,6 @@
 # Flush with Cash
 
-A small, silly browser tycoon experiment. **Milestone 0:** a working Vite + Phaser foundation, with a placeholder isometric scene. No gameplay yet.
+A small, silly browser tycoon experiment. The first-day vertical slice is playable: choose one of five sites for an inherited unit, watch the town through a short operating day, and see a retro result card.
 
 Design source: [Game Design & Development Handoff](https://app.notion.com/p/3e517b179e488181b31de3e6de473c6f).
 
@@ -25,12 +25,12 @@ Build produces `dist/`; preview serves that production build locally. No backend
 ## Where things live
 
 - `src/main.js`: starts Phaser and sets up a responsive canvas.
-- `src/rendering/FoundationScene.js`: draws the temporary display and a pulsing light that proves the game loop is running.
-- `src/content/theme.js`: theme-specific copy and colors.
-- `src/simulation/state.js`: initial plain JavaScript state, independent of Phaser. Future business rules go here.
+- `src/rendering/FoundationScene.js`: draws the isometric town, moving pedestrians, controls, HUD, and result card.
+- `src/content/theme.js`: theme-specific copy, colors, site clues, and balance values.
+- `src/simulation/state.js`: plain JavaScript placement and day rules, independent of Phaser and browser APIs.
 - `src/style.css`: the HTML shell around the game.
 
-Only two packages are needed: Phaser for the game, Vite for serving/building it. Placeholder art is drawn directly with Phaser; no asset pipeline or generalized engine is needed yet.
+Only two packages are needed: Phaser for the game, Vite for serving/building it. Placeholder art is drawn directly with Phaser. A complete day lasts about 15 seconds. Each of its 120 simulation minutes can bring a visitor; demand, condition, and site cost make the busiest location an imperfect choice. Revenue is earned per use, while placement and regular cleaning are costs. The result needs at least $5 profit and 55% satisfaction. Use **Try Another Site** to compare outcomes.
 
 ## Small Git workflow
 
@@ -54,4 +54,4 @@ git push -u origin main
 
 ## Next milestone
 
-Milestone 1 adds a title-screen transition and a bare town with roughly five selectable locations. Placement, economy, pedestrians, and day simulation remain later milestones.
+Replace vector placeholders with a consistent art set, add more legible customer feedback, and playtest site balance. The simulation intentionally covers one unit and one day only.
