@@ -3,7 +3,7 @@ import { theme, sites, economy } from '../content/theme.js';
 import { advanceMinute } from '../simulation/state.js';
 import { saveGame } from '../simulation/storage.js';
 import portableToilet from '../assets/themes/flush-with-cash/street/portable-toilet-v1.png';
-import pedestrian from '../assets/themes/flush-with-cash/street/pedestrian-v1.png';
+import pedestrianWalk from '../assets/themes/flush-with-cash/street/pedestrian-walk-v1.png';
 import canalWalkBackground from '../assets/themes/flush-with-cash/street/canal-walk-v1.png';
 
 const ink = '#193a40';
@@ -23,13 +23,16 @@ export class OperatingScene extends Phaser.Scene {
 
   preload() {
     this.load.image('portable-toilet', portableToilet);
-    this.load.image('pedestrian', pedestrian);
+    this.load.spritesheet('pedestrian-walk', pedestrianWalk, { frameWidth: 512, frameHeight: 512 });
     this.load.image('street-canal-walk', canalWalkBackground);
   }
 
   create() {
     this.lastTick = 0;
     this.site = sites.find(site => site.id === this.state.site);
+    if (!this.anims.exists('pedestrian-walk')) {
+      this.anims.create({ key: 'pedestrian-walk', frames: this.anims.generateFrameNumbers('pedestrian-walk', { start: 0, end: 4 }), frameRate: 10, repeat: -1 });
+    }
     this.drawStreet();
     this.drawHud();
   }
@@ -126,9 +129,10 @@ export class OperatingScene extends Phaser.Scene {
 
   spawnCustomer(activity) {
     const direction = activity.visitor % 2 ? 1 : -1;
-    const person = this.add.image(direction > 0 ? -20 : 980, 370, 'pedestrian')
+    const person = this.add.sprite(direction > 0 ? -20 : 980, 370, 'pedestrian-walk')
       .setDisplaySize(42, 64)
-      .setFlipX(direction < 0);
+      .setFlipX(direction < 0)
+      .play('pedestrian-walk');
     const pass = activity.type === 'pass';
     if (pass) {
       this.tweens.add({ targets: person, x: direction > 0 ? 990 : -30, duration: 1100,
@@ -144,6 +148,13 @@ export class OperatingScene extends Phaser.Scene {
   }
 
   interactWithUnit(person, activity, direction) {
+    if (!person.active) return;
+    person.anims.stop();
+    person.setFrame(5);
+    this.time.delayedCall(150, () => this.resolveInteraction(person, activity, direction));
+  }
+
+  resolveInteraction(person, activity, direction) {
     if (!person.active) return;
     if (activity.type === 'served') {
       this.flash(person.x, 320, '+$' + activity.amount, '#f4ca72');
@@ -162,6 +173,7 @@ export class OperatingScene extends Phaser.Scene {
   }
 
   exitCustomer(person, direction) {
+    person.play('pedestrian-walk');
     this.tweens.add({ targets: person, y: 402, duration: 300, onComplete: () => {
       if (!person.active) return;
       this.tweens.add({ targets: person, x: direction > 0 ? 990 : -30, alpha: 0, duration: 650,
