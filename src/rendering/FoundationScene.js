@@ -73,6 +73,7 @@ export class FoundationScene extends Phaser.Scene {
   }
 
   town() {
+    const townStart = this.children.list.length;
     this.add.image(480, 260, 'parkland-board').setDisplaySize(900, 510);
     const g = this.add.graphics();
     const c = theme.colors;
@@ -120,6 +121,8 @@ export class FoundationScene extends Phaser.Scene {
           .on('pointerdown', chooseSite);
       }
     });
+    // Keep the selection board airy without shrinking the UI that follows it.
+    this.add.container(48, 27, this.children.list.slice(townStart)).setScale(0.9);
   }
 
   drawUnit(g, x, y) {
