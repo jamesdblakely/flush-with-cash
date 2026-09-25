@@ -19,7 +19,11 @@ export function loadGame(storage) {
     const history = Array.isArray(state.history) ? state.history :
       state.phase === 'result' ? [{ day: state.day, site: state.site,
         profit: state.revenue - state.costs }] : [];
-    return { ...state, history };
+    return { ...state, occupiedUntil: Number.isInteger(state.occupiedUntil) ? state.occupiedUntil : 0,
+      weekStart: typeof state.weekStart === 'boolean' ? state.weekStart : false,
+      reinforced: typeof state.reinforced === 'boolean' ? state.reinforced : false,
+      surgePricing: typeof state.surgePricing === 'boolean' ? state.surgePricing : false,
+      recentTurnawayUntil: Number.isInteger(state.recentTurnawayUntil) ? state.recentTurnawayUntil : 0, history };
   } catch {
     return null;
   }

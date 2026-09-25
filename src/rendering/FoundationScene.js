@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { theme, sites, economy } from '../content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary,
+import { theme, sites, economy, trafficTiers } from '../content/theme.js';
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getAvailableSites, getServiceCost,
   nextDay, serviceUnit, buySignage, canAffordNextDay } from '../simulation/state.js';
 import { loadGame, saveGame } from '../simulation/storage.js';
 
@@ -10,10 +10,18 @@ const cream = '#fff4ce';
 export class FoundationScene extends Phaser.Scene {
   constructor() { super('game'); }
 
+  init(data) {
+    this.incomingState = data.state || null;
+  }
+
   create() {
-    this.savedState = loadGame(localStorage);
-    this.state = createInitialState();
+    this.savedState = this.incomingState ? null : loadGame(localStorage);
+    this.state = this.incomingState || createInitialState();
     this.lastTick = 0;
+    if (this.state.phase === 'running') {
+      this.scene.start('operating', { state: this.state });
+      return;
+    }
     this.paint();
   }
 
@@ -62,7 +70,7 @@ export class FoundationScene extends Phaser.Scene {
     // Cross-town pavement gives pedestrians a clear visual route.
     this.polygon(g, [[132, 261], [470, 407], [827, 255], [487, 110]], 0xd7d0a4);
     this.polygon(g, [[170, 264], [470, 386], [789, 255], [487, 131]], 0xbfc49b);
-    sites.forEach((site, index) => {
+    getAvailableSites(this.state).forEach((site, index) => {
       const { x, y } = site;
       g.fillStyle(0x325d5b, 0.45).fillEllipse(x, y + 13, 86, 26);
       if (this.state.site === site.id) {
@@ -74,6 +82,8 @@ export class FoundationScene extends Phaser.Scene {
         g.lineStyle(2, 0x33595a).strokeEllipse(x, y, 60, 25);
       }
       if (this.state.phase === 'planning') {
+        const trafficTier = trafficTiers[site.trafficTier];
+        this.add.circle(x + 31, y - 25, 9, trafficTier.color).setStrokeStyle(2, 0xfff4ce);
         const marker = this.add.circle(x, y - 29, 15,
           this.state.selectedSite === site.id ? 0xf4ca72 : 0x244f55)
           .setStrokeStyle(2, 0xfff4ce);
@@ -187,28 +197,38 @@ export class FoundationScene extends Phaser.Scene {
 
   planningScreen() {
     const selected = sites.find(site => site.id === this.state.selectedSite);
+    const needsService = selected?.minimumCondition && this.state.condition < selected.minimumCondition;
+    const weekNeedsService = this.state.weekStart && this.state.condition < 80;
+    const upgradesComplete = this.state.signage && this.state.reinforced && this.state.surgePricing;
+    const serviceCost = getServiceCost(this.state);
     const canService = this.state.condition < 100 &&
-      this.state.bank - economy.serviceCost >= Math.min(...sites.map(site => site.cost));
-    const canBuySignage = !this.state.signage &&
-      this.state.bank - economy.signageCost >= Math.min(...sites.map(site => site.cost));
+      this.state.bank - serviceCost >= Math.min(...sites.map(site => site.cost));
     this.add.rectangle(480, 472, 960, 136, 0x193a40, 0.96);
-    this.label(22, 410, `DAY ${this.state.day}  •  CHOOSE A SITE`, 18, '#f4ca72');
+    this.label(22, 410, this.state.weekStart ? `WEEK ${Math.floor((this.state.day - 1) / 7) + 1}  •  START WITH A READY UNIT` : `DAY ${this.state.day}  •  CHOOSE A SITE`, 18, '#f4ca72');
     this.label(22, 438, selected ? `${selected.name}  •  Permit $${selected.cost}` : 'Tap a site pad, number, or name below.', 16);
     this.label(22, 464, `Bank $${this.state.bank}  •  Condition ${Math.round(this.state.condition)}%  •  Reputation ${this.state.reputation}`, 14);
-    this.label(22, 488, selected ? `${selected.clue}  •  Footfall ${selected.traffic}/hr  •  Need ${Math.round(selected.demand * 100)}%` : `Service restores condition to 100% for $${economy.serviceCost}.`, 13);
+    this.label(22, 488, weekNeedsService ? 'New week requirement: service to at least 80% condition before opening.' : selected ? `${selected.clue}  •  Scout report: ${selected.signal}` : `Service restores condition to 100% • estimate $${serviceCost}.`, 13);
+    let legendX = 380;
+    Object.values(trafficTiers).forEach(tier => {
+      this.add.circle(legendX, 464, 6, tier.color);
+      this.label(legendX + 10, 457, tier.label, 11, cream);
+      legendX += tier.label.length * 8 + 32;
+    });
     const serviceLabel = this.state.condition >= 100 ? 'UNIT READY' :
-      canService ? `SERVICE UNIT $${economy.serviceCost}` : 'NEED CASH TO SERVICE';
+      canService ? `SERVICE UNIT $${serviceCost}` : 'NEED CASH TO SERVICE';
     this.button(815, 432, 255, serviceLabel, () => {
       this.state = serviceUnit(this.state); this.saveAndPaint();
     }, canService);
-    this.button(815, 381, 255, this.state.signage ? 'TOWN SIGN INSTALLED' :
-      canBuySignage ? `BUY TOWN SIGN $${economy.signageCost}` : 'NEED CASH FOR SIGN', () => {
-      this.state = buySignage(this.state); this.saveAndPaint();
-    }, canBuySignage);
-    this.button(815, 483, 255, selected ? `PLACE FOR $${selected.cost}` : 'PICK A SITE', () => {
-      this.state = placeUnit(this.state); this.saveAndPaint();
-    }, Boolean(selected && this.state.bank >= selected.cost));
-    sites.forEach((site, i) => {
+    if (!upgradesComplete) {
+      this.button(815, 381, 255, 'UPGRADES', () => {
+        this.scene.start('upgrades', { state: this.state });
+      });
+    }
+    this.button(815, 483, 255, selected ? (weekNeedsService || needsService ? 'SERVICE REQUIRED' : `PLACE FOR $${selected.cost}`) : 'PICK A SITE', () => {
+      const placed = placeUnit(this.state);
+      if (placed.phase === 'running') this.scene.start('calendar', { state: placed });
+    }, Boolean(selected && this.state.bank >= selected.cost && !needsService && !weekNeedsService));
+    getAvailableSites(this.state).forEach((site, i) => {
       const text = this.label(20 + i * 190, 520, `${i + 1} ${site.name}`, 12,
         this.state.selectedSite === site.id ? '#f4ca72' : cream);
       text.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
@@ -264,7 +284,7 @@ export class FoundationScene extends Phaser.Scene {
     this.label(480, 369, `Bank $${s.bank}   Condition ${Math.round(s.condition)}%   Reputation ${s.reputation} (${s.reputation - s.dayStartReputation >= 0 ? '+' : ''}${s.reputation - s.dayStartReputation})`, 15).setOrigin(0.5);
     this.label(480, 396, `Total profit $${ledger.totalProfit}   •   Best day: ${ledger.bestDay?.day ?? s.day} ($${ledger.bestDay?.profit ?? result.profit})`, 14, '#b8d4bf').setOrigin(0.5);
     this.button(480, 427, 230, canContinue ? `PLAN DAY ${s.day + 1}` : 'START OVER', () => {
-      this.state = canContinue ? nextDay(this.state) : { ...createInitialState(), phase: 'planning' };
+      this.state = canContinue ? nextDay(s) : { ...createInitialState(), phase: 'planning' };
       this.saveAndPaint();
     });
   }

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sites, economy } from '../src/content/theme.js';
-import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary,
-  nextDay, serviceUnit, buySignage, canAffordNextDay } from '../src/simulation/state.js';
+import { createInitialState, selectSite, placeUnit, advanceMinute, getResult, getHistorySummary, getServiceCost,
+  nextDay, serviceUnit, buySignage, canAffordNextDay, getAvailableSites } from '../src/simulation/state.js';
 import { loadGame, saveGame } from '../src/simulation/storage.js';
 
 function openAt(siteId) {
@@ -14,6 +14,10 @@ function openAt(siteId) {
 test('visible visitor outcomes account for every arrival and sale', () => {
   for (const site of sites) {
     let state = openAt(site.id);
+    if (site.days) {
+      state = { ...createInitialState(), phase: 'planning', day: site.days[0], bank: 500 };
+      state = placeUnit(selectSite(state, site.id));
+    }
     let observedVisitors = 0;
     let observedSales = 0;
     while (state.phase === 'running') {
@@ -22,7 +26,7 @@ test('visible visitor outcomes account for every arrival and sale', () => {
       if (state.activity) {
         observedVisitors++;
         assert.equal(state.activity.visitor, state.visitors);
-        assert.ok(['pass', 'served', 'turnedAway'].includes(state.activity.type));
+        assert.ok(['pass', 'served', 'occupied', 'turnedAway', 'outOfService'].includes(state.activity.type));
         if (state.activity.type === 'served') observedSales++;
       }
       assert.equal(state.visitors - previous.visitors, state.activity ? 1 : 0);
@@ -32,18 +36,30 @@ test('visible visitor outcomes account for every arrival and sale', () => {
     assert.equal(state.visitors, observedVisitors);
     assert.equal(state.uses, observedSales);
     assert.equal(state.visitors, state.uses + state.passers + state.turnedAway);
-    assert.equal(state.revenue, state.uses * economy.price);
+    assert.equal(state.revenue, state.uses * (site.price ?? economy.price));
     assert.equal(getResult(state).profit, state.revenue - state.costs);
   }
 });
 
-test('a worn-out unit loses customers who need it but does not charge them', () => {
-  let state = { ...openAt('market'), condition: 10 };
+test('customers needing an occupied unit turn away until the visit ends', () => {
+  let state = { ...openAt('park'), occupiedUntil: 10, minute: 1, seed: 1 };
+  let foundOccupied = false;
+  while (state.minute < 10) {
+    state = advanceMinute(state);
+    if (state.activity?.type === 'occupied') foundOccupied = true;
+  }
+  assert.equal(foundOccupied, true);
+  assert.ok(state.turnedAway > 0);
+});
+
+test('an out-of-service unit loses customers who need it but does not charge them', () => {
+  let state = { ...openAt('market'), condition: 0 };
   while (state.phase === 'running') state = advanceMinute(state);
   assert.ok(state.turnedAway > 0);
   assert.equal(state.uses, 0);
   assert.equal(state.revenue, 0);
   assert.equal(state.visitors, state.passers + state.turnedAway);
+  assert.ok(state.costs > sites.find(site => site.id === 'market').cost + economy.upkeep * 10);
 });
 
 test('day two carries resources forward and accounts for service as a cost', () => {
@@ -63,11 +79,11 @@ test('day two carries resources forward and accounts for service as a cost', () 
   assert.equal(state.costs, 0);
   state = serviceUnit(state);
   assert.equal(state.condition, 100);
-  assert.equal(state.bank, endOfDay.bank - economy.serviceCost);
-  assert.equal(state.costs, economy.serviceCost);
+  assert.equal(state.bank, endOfDay.bank - getServiceCost({ ...state, condition: endOfDay.condition, bank: endOfDay.bank }));
+  assert.equal(state.costs, getServiceCost({ ...state, condition: endOfDay.condition, bank: endOfDay.bank }));
   state = placeUnit(selectSite(state, 'park'));
   assert.equal(state.phase, 'running');
-  assert.equal(state.costs, economy.serviceCost + sites.find(site => site.id === 'park').cost);
+  assert.equal(state.costs, getServiceCost({ ...state, condition: endOfDay.condition, bank: endOfDay.bank }) + sites.find(site => site.id === 'park').cost);
   while (state.phase === 'running') state = advanceMinute(state);
   assert.equal(state.day, 2);
   assert.equal(getResult(state).profit, state.revenue - state.costs);
@@ -77,6 +93,53 @@ test('a business that cannot afford any site must restart', () => {
   const state = { ...createInitialState(), phase: 'result', bank: 0 };
   assert.equal(canAffordNextDay(state), false);
   assert.equal(nextDay(state), state);
+});
+
+test('the high-capacity festival is offered only on Friday and Saturday', () => {
+  const monday = { ...createInitialState(), phase: 'planning', day: 1 };
+  const friday = { ...monday, day: 5 };
+  const sunday = { ...monday, day: 7 };
+  assert.equal(getAvailableSites(monday).some(site => site.id === 'festival'), false);
+  assert.equal(getAvailableSites(friday).some(site => site.id === 'festival'), true);
+  assert.equal(getAvailableSites(sunday).some(site => site.id === 'festival'), false);
+  assert.equal(selectSite(monday, 'festival'), monday);
+});
+
+test('one unit must be serviced between Friday and Saturday festival days', () => {
+  let state = { ...createInitialState(), phase: 'planning', day: 5, bank: 500 };
+  state = placeUnit(selectSite(state, 'festival'));
+  while (state.phase === 'running') state = advanceMinute(state);
+  state = nextDay(state);
+  const selected = selectSite(state, 'festival');
+  assert.ok(selected.condition < 80);
+  assert.equal(placeUnit(selected), selected);
+  state = serviceUnit(selected);
+  assert.equal(state.condition, 100);
+  assert.equal(placeUnit(selectSite(state, 'festival')).phase, 'running');
+});
+
+test('repair estimates rise with damage and reinforced structure maintenance', () => {
+  const nearlyClean = { ...createInitialState(), condition: 90 };
+  const broken = { ...nearlyClean, condition: 0 };
+  assert.ok(getServiceCost(broken) > getServiceCost(nearlyClean));
+  assert.equal(getServiceCost({ ...broken, reinforced: true }),
+    getServiceCost(broken) + economy.reinforcedServiceCost);
+});
+
+test('a new week keeps the business but requires 80% condition before placement', () => {
+  let state = { ...createInitialState(), phase: 'result', day: 7, bank: 300, condition: 55,
+    signage: true, reputation: 57 };
+  state = nextDay(state);
+  assert.equal(state.day, 8);
+  assert.equal(state.weekStart, true);
+  assert.equal(state.signage, false);
+  assert.equal(state.reputation, 57);
+  const selected = selectSite(state, 'canal');
+  assert.equal(placeUnit(selected), selected);
+  state = serviceUnit(selected);
+  state = placeUnit(selectSite(state, 'canal'));
+  assert.equal(state.phase, 'running');
+  assert.equal(state.weekStart, false);
 });
 
 test('town sign costs cash once, brings more visitors, and carries into later days', () => {

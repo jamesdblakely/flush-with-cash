@@ -4,8 +4,8 @@ export function createInitialState() {
   return { phase: 'title', day: 1, bank: economy.startingCash,
     selectedSite: null, site: null,
     minute: 0, uses: 0, revenue: 0, costs: 0, condition: 100, satisfaction: 72,
-    reputation: 50, dayStartReputation: 50, signage: false,
-    visitors: 0, passers: 0, turnedAway: 0,
+    reputation: 50, dayStartReputation: 50, signage: false, reinforced: false, surgePricing: false,
+    visitors: 0, passers: 0, turnedAway: 0, occupiedUntil: 0, recentTurnawayUntil: 0, weekStart: false,
     activity: null, events: [], history: [], seed: 1847 };
 }
 
@@ -13,40 +13,69 @@ export function canAffordNextDay(state) {
   return state.bank >= Math.min(...sites.map(site => site.cost));
 }
 
+export function getAvailableSites(state) {
+  const dayOfWeek = ((state.day - 1) % 7) + 1;
+  return sites.filter(site => !site.days || site.days.includes(dayOfWeek));
+}
+
+export function getServiceCost(state) {
+  const damageCost = Math.ceil((100 - state.condition) / 100 * economy.serviceDamageCost);
+  return economy.serviceBaseCost + damageCost + (state.reinforced ? economy.reinforcedServiceCost : 0);
+}
+
 export function nextDay(state) {
-  if (state.phase !== 'result' || !canAffordNextDay(state)) return state;
-  return { ...state, phase: 'planning', day: state.day + 1,
+  if (!['result', 'upgrades'].includes(state.phase) || !canAffordNextDay(state)) return state;
+  const day = state.day + 1;
+  const weekStart = (day - 1) % 7 === 0;
+  return { ...state, phase: 'planning', day, weekStart, signage: weekStart ? false : state.signage,
     selectedSite: null, site: null, minute: 0, uses: 0, revenue: 0, costs: 0,
     satisfaction: 72, dayStartReputation: state.reputation,
-    visitors: 0, passers: 0, turnedAway: 0, activity: null, events: [] };
+    visitors: 0, passers: 0, turnedAway: 0, occupiedUntil: 0, recentTurnawayUntil: 0, activity: null, events: [] };
 }
 
 export function serviceUnit(state) {
+  const serviceCost = getServiceCost(state);
   if (state.phase !== 'planning' || state.condition >= 100 ||
-    state.bank - economy.serviceCost < Math.min(...sites.map(site => site.cost))) return state;
-  return { ...state, bank: state.bank - economy.serviceCost,
-    costs: state.costs + economy.serviceCost, condition: 100,
-    events: [`Unit serviced: -$${economy.serviceCost}.`] };
+    state.bank - serviceCost < Math.min(...sites.map(site => site.cost))) return state;
+  return { ...state, bank: state.bank - serviceCost,
+    costs: state.costs + serviceCost, condition: 100,
+    events: [`Unit serviced: -$${serviceCost}.`] };
 }
 
 export function buySignage(state) {
-  if (state.phase !== 'planning' || state.signage ||
+  if (!['planning', 'upgrades'].includes(state.phase) || state.signage ||
     state.bank - economy.signageCost < Math.min(...sites.map(site => site.cost))) return state;
   return { ...state, bank: state.bank - economy.signageCost,
     costs: state.costs + economy.signageCost, signage: true,
     events: [`Bought a town sign: -$${economy.signageCost}.`] };
 }
 
+export function buyReinforced(state) {
+  if (state.phase !== 'upgrades' || state.reinforced ||
+    state.bank - economy.reinforcedCost < Math.min(...sites.map(site => site.cost))) return state;
+  return { ...state, bank: state.bank - economy.reinforcedCost, reinforced: true,
+    events: ['Reinforced structure installed: -$' + economy.reinforcedCost + '.'] };
+}
+
+export function buySurgePricing(state) {
+  if (state.phase !== 'upgrades' || state.surgePricing ||
+    state.bank - economy.surgeCost < Math.min(...sites.map(site => site.cost))) return state;
+  return { ...state, bank: state.bank - economy.surgeCost, surgePricing: true,
+    events: ['Surge pricing enabled: -$' + economy.surgeCost + '.'] };
+}
+
 export function selectSite(state, id) {
-  if (state.phase !== 'planning' || !sites.some(site => site.id === id)) return state;
+  if (state.phase !== 'planning' || !getAvailableSites(state).some(site => site.id === id)) return state;
   return { ...state, selectedSite: id };
 }
 
 export function placeUnit(state) {
-  const site = sites.find(item => item.id === state.selectedSite);
-  if (state.phase !== 'planning' || !site || state.bank < site.cost) return state;
+  const site = getAvailableSites(state).find(item => item.id === state.selectedSite);
+  if (state.phase !== 'planning' || !site || state.bank < site.cost ||
+    state.condition < (site.minimumCondition ?? 0) ||
+    (state.weekStart && state.condition < 80)) return state;
   return { ...state, phase: 'running', site: site.id, bank: state.bank - site.cost,
-    costs: state.costs + site.cost,
+    costs: state.costs + site.cost, weekStart: false,
     events: [...state.events, `Opened at ${site.name}. Placement: $${site.cost}.`] };
 }
 
@@ -58,9 +87,10 @@ function random(seed) {
 export function advanceMinute(state) {
   if (state.phase !== 'running') return state;
   const site = sites.find(item => item.id === state.site);
+  const salePrice = site.price ?? economy.price;
   const minute = state.minute + 1;
   let { seed, bank, uses, revenue, costs, condition, satisfaction, reputation,
-    visitors, passers, turnedAway } = state;
+    visitors, passers, turnedAway, occupiedUntil = 0, recentTurnawayUntil = 0 } = state;
   let roll; [seed, roll] = random(seed);
   const traffic = site.traffic * (state.signage ? economy.signageTrafficBoost : 1);
   const arrival = roll < Math.min(1, traffic / 60);
@@ -75,14 +105,30 @@ export function advanceMinute(state) {
       if (passers % 3 === 1) events.push('A passerby kept walking.');
     } else {
       [seed, roll] = random(seed);
-      if (condition > 15 && roll < 0.45 + condition / 200) {
+      if (condition <= 0) {
+        turnedAway++;
+        bank -= economy.outOfServiceFine;
+        costs += economy.outOfServiceFine;
+        satisfaction = Math.max(0, satisfaction - 2);
+        activity = { type: 'outOfService', visitor: visitors };
+        recentTurnawayUntil = minute + economy.surgeWindow;
+        events.push('Out-of-service fine: -$' + economy.outOfServiceFine + '.');
+      } else if (minute < occupiedUntil) {
+        turnedAway++;
+        satisfaction = Math.max(0, satisfaction - 0.7);
+        activity = { type: 'occupied', visitor: visitors };
+        recentTurnawayUntil = minute + economy.surgeWindow;
+        events.push('A customer found the unit occupied and turned away.');
+      } else if (roll < 0.45 + condition / 200) {
         uses++;
-        bank += economy.price;
-        revenue += economy.price;
-        condition = Math.max(0, condition - economy.wear);
+        const chargedPrice = Math.round(salePrice * (state.surgePricing && minute < recentTurnawayUntil ? economy.surgeMultiplier : 1));
+        bank += chargedPrice;
+        revenue += chargedPrice;
+        condition = Math.max(0, condition - economy.wear * (site.wear ?? 1) * (state.reinforced ? 1 - economy.reinforcedWearReduction : 1));
         satisfaction = Math.min(100, satisfaction + 0.6);
-        activity = { type: 'served', visitor: visitors };
-        events.push(`Customer served. +$${economy.price}`);
+        occupiedUntil = minute + economy.visitDuration;
+        activity = { type: 'served', visitor: visitors, amount: chargedPrice };
+        events.push(condition === 0 ? 'The last customer wore the unit out: out of service.' : 'Customer served. +$' + chargedPrice + (chargedPrice > salePrice ? ' (surge)' : ''));
       } else {
         turnedAway++;
         satisfaction = Math.max(0, satisfaction - 1.4);
@@ -105,7 +151,7 @@ export function advanceMinute(state) {
     day: state.day, site: state.site, profit: revenue - costs,
   }] : state.history;
   return { ...state, phase, minute, bank, uses, revenue, costs, condition, satisfaction,
-    reputation, visitors, passers, turnedAway, activity, seed, history,
+    reputation, visitors, passers, turnedAway, occupiedUntil, recentTurnawayUntil, activity, seed, history,
     events: events.slice(-4) };
 }
 
