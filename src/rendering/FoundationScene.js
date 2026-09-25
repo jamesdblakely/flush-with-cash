@@ -69,9 +69,11 @@ export class FoundationScene extends Phaser.Scene {
       if (this.state.phase === 'planning') {
         const marker = this.add.circle(x, y - 29, 15,
           this.state.selectedSite === site.id ? 0xf4ca72 : 0x244f55)
-          .setStrokeStyle(2, 0xfff4ce).setInteractive({ useHandCursor: true });
+          .setStrokeStyle(2, 0xfff4ce);
         this.label(x, y - 29, String(index + 1), 14).setOrigin(0.5);
-        marker.on('pointerdown', () => { this.state = selectSite(this.state, site.id); this.paint(); });
+        // One generous hit area covers the number and the yellow placement pad.
+        this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => { this.state = selectSite(this.state, site.id); this.paint(); });
       }
     });
   }
@@ -155,7 +157,7 @@ export class FoundationScene extends Phaser.Scene {
     const selected = sites.find(site => site.id === this.state.selectedSite);
     this.add.rectangle(480, 482, 960, 116, 0x193a40, 0.96);
     this.label(22, 435, 'CHOOSE A SITE', 18, '#f4ca72');
-    this.label(22, 463, selected ? `${selected.name}  •  $${selected.cost}` : 'Tap a numbered marker or a site below.', 16);
+    this.label(22, 463, selected ? `${selected.name}  •  $${selected.cost}` : 'Tap a site pad, number, or name below.', 16);
     this.label(22, 489, selected ? `${selected.clue}  •  Footfall ${selected.traffic}/hr  •  Need ${Math.round(selected.demand * 100)}%` : `Bank $${this.state.bank}  •  One inherited unit`, 14);
     this.button(815, 478, 255, selected ? `PLACE FOR $${selected.cost}` : 'PICK A SITE', () => {
       this.state = placeUnit(this.state); this.paint();
