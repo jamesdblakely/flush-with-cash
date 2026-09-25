@@ -99,14 +99,22 @@ export class FoundationScene extends Phaser.Scene {
         const labelY = Math.max(68, y - 130);
         this.add.circle(x + markerWidth / 2 + 12, labelY, 9, trafficTier.color)
           .setStrokeStyle(2, 0xfff4ce);
-        this.add.rectangle(x, labelY, markerWidth, 26,
+        const chooseSite = () => {
+          this.state = selectSite(this.state, site.id);
+          this.saveAndPaint();
+        };
+        const nameplate = this.add.rectangle(x, labelY, markerWidth, 26,
           this.state.selectedSite === site.id ? 0xf4ca72 : 0x244f55)
-          .setStrokeStyle(2, 0xfff4ce);
-        this.label(x, labelY, site.name.toUpperCase(), 11,
-          this.state.selectedSite === site.id ? ink : cream).setOrigin(0.5);
+          .setStrokeStyle(2, 0xfff4ce)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', chooseSite);
+        const name = this.label(x, labelY, site.name.toUpperCase(), 11,
+          this.state.selectedSite === site.id ? ink : cream).setOrigin(0.5)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', chooseSite);
         // One generous hit area covers the location label and the yellow placement pad.
         this.add.zone(x, y - 9, 80, 76).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { this.state = selectSite(this.state, site.id); this.saveAndPaint(); });
+          .on('pointerdown', chooseSite);
       }
     });
   }
