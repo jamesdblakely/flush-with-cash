@@ -88,11 +88,9 @@ export class OperatingScene extends Phaser.Scene {
       }
     }
     this.drawUnit(g, 455, 325);
-    this.occupant = this.add.container(455, 319, [
-      this.add.ellipse(0, 15, 24, 8, 0x193a40, 0.45),
-      this.add.rectangle(0, 4, 13, 21, 0x244f55).setStrokeStyle(2, 0xfff4ce),
-      this.add.circle(0, -10, 8, 0xffd4aa).setStrokeStyle(2, 0x193a40),
-    ]).setVisible(false);
+    this.occupant = this.add.sprite(455, 321, 'pedestrian-walker-0', 0)
+      .setScale(0.115)
+      .setVisible(false);
     if (this.state.signage) this.drawSign(g, 455, 325);
     if (this.state.reinforced) this.drawReinforcement(g, 455, 325);
     if (this.state.surgePricing) this.drawSurgeSign(g, 455, 325);
