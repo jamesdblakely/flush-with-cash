@@ -122,7 +122,7 @@ export class FoundationScene extends Phaser.Scene {
       if (landmark) {
         if (this.state.phase === 'planning') {
           trafficHalo = this.add.graphics();
-          [[0.09, 0.78], [0.12, 0.66], [0.16, 0.54], [0.22, 0.42]].forEach(([alpha, scale]) => {
+          [[0.18, 0.9], [0.25, 0.75], [0.32, 0.6], [0.42, 0.46]].forEach(([alpha, scale]) => {
             trafficHalo.fillStyle(trafficTier.color, alpha)
               .fillCircle(x, landmarkY, landmark.size * scale);
           });

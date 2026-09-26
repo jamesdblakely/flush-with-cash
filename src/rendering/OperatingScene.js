@@ -88,6 +88,11 @@ export class OperatingScene extends Phaser.Scene {
       }
     }
     this.drawUnit(g, 455, 325);
+    this.occupant = this.add.container(455, 319, [
+      this.add.ellipse(0, 15, 24, 8, 0x193a40, 0.45),
+      this.add.rectangle(0, 4, 13, 21, 0x244f55).setStrokeStyle(2, 0xfff4ce),
+      this.add.circle(0, -10, 8, 0xffd4aa).setStrokeStyle(2, 0x193a40),
+    ]).setVisible(false);
     if (this.state.signage) this.drawSign(g, 455, 325);
     if (this.state.reinforced) this.drawReinforcement(g, 455, 325);
     if (this.state.surgePricing) this.drawSurgeSign(g, 455, 325);
@@ -151,6 +156,7 @@ export class OperatingScene extends Phaser.Scene {
     this.upgradeText?.setText(upgrades.length ? 'ACTIVE: ' + upgrades.join(' • ') : 'ACTIVE: NONE');
     this.progress.width = 920 * s.minute / economy.dayMinutes;
     this.occupiedLabel.setVisible(s.minute < s.occupiedUntil);
+    this.occupant?.setVisible(s.minute < s.occupiedUntil);
     this.outOfServiceLabel.setVisible(s.condition <= 0);
   }
 
@@ -195,7 +201,10 @@ export class OperatingScene extends Phaser.Scene {
       });
       return;
     }
-    this.playRefusal(person, activity, direction);
+    // A refused customer stays visibly outside the door. The in-use silhouette
+    // above represents the customer already occupying the unit.
+    this.tweens.add({ targets: person, x: 455 - direction * 72, y: 370, duration: 160,
+      onComplete: () => this.playRefusal(person, activity, direction) });
   }
 
   playRefusal(person, activity, direction) {
