@@ -91,6 +91,7 @@ export class OperatingScene extends Phaser.Scene {
     this.vacancyFrame = this.add.rectangle(477, 284, 43, 28, 0x152a2d).setStrokeStyle(2, 0x071417);
     this.vacancyLight = this.add.rectangle(477, 284, 35, 19, 0x4f9f63).setStrokeStyle(1, 0xfff4ce);
     this.vacancyText = this.displayLabel(477, 284, 'VACANT', 6, '#102b20').setOrigin(0.5);
+    this.vacancyToken = 0;
     if (this.state.signage) this.drawSign(g, 455, 325);
     if (this.state.reinforced) this.drawReinforcement(g, 455, 325);
     if (this.state.surgePricing) this.drawSurgeSign(g, 455, 325);
@@ -152,11 +153,27 @@ export class OperatingScene extends Phaser.Scene {
       s.airFreshener && 'FRESHENER', s.ventilationFan && 'FAN'].filter(Boolean);
     this.upgradeText?.setText(upgrades.length ? 'ACTIVE: ' + upgrades.join(' • ') : 'ACTIVE: NONE');
     this.progress.width = 920 * s.minute / economy.dayMinutes;
-    const inUse = s.minute < s.occupiedUntil;
-    const status = s.condition <= 0 ? ['CLOSED', 0xf59b82, ink] : inUse ? ['IN USE', 0xdf5b55, cream] : ['VACANT', 0x4f9f63, '#102b20'];
-    this.vacancyLight.setFillStyle(status[1]);
-    this.vacancyText.setText(status[0]).setColor(status[2]);
+    if (s.condition <= 0) this.setVacancyStatus('closed');
     this.outOfServiceLabel.setVisible(s.condition <= 0);
+  }
+
+  setVacancyStatus(status) {
+    const styles = {
+      vacant: ['VACANT', 0x4f9f63, '#102b20'],
+      inUse: ['IN USE', 0xdf5b55, cream],
+      closed: ['CLOSED', 0xf59b82, ink],
+    };
+    const [label, color, textColor] = styles[status];
+    this.vacancyLight.setFillStyle(color);
+    this.vacancyText.setText(label).setColor(textColor);
+  }
+
+  showInUseFor(duration) {
+    const token = ++this.vacancyToken;
+    this.setVacancyStatus('inUse');
+    this.time.delayedCall(duration, () => {
+      if (token === this.vacancyToken && this.state.condition > 0) this.setVacancyStatus('vacant');
+    });
   }
 
   spawnCustomer(activity) {
@@ -174,8 +191,8 @@ export class OperatingScene extends Phaser.Scene {
       return;
     }
     const entranceX = 455 - direction * 42;
-    this.tweens.add({ targets: person, x: entranceX, duration: 480, onComplete: () => {
-      this.tweens.add({ targets: person, y: 347, duration: 300, onComplete: () => {
+    this.tweens.add({ targets: person, x: entranceX, duration: 180, onComplete: () => {
+      this.tweens.add({ targets: person, y: 347, duration: 90, onComplete: () => {
         this.interactWithUnit(person, activity, direction);
       } });
     } });
@@ -184,12 +201,13 @@ export class OperatingScene extends Phaser.Scene {
   interactWithUnit(person, activity, direction) {
     if (!person.active) return;
     person.anims.pause();
-    this.time.delayedCall(150, () => this.resolveInteraction(person, activity, direction));
+    this.time.delayedCall(55, () => this.resolveInteraction(person, activity, direction));
   }
 
   resolveInteraction(person, activity, direction) {
     if (!person.active) return;
     if (activity.type === 'served') {
+      this.showInUseFor(400);
       this.flash(person.x, 320, '+$' + activity.amount, '#f4ca72');
       person.setVisible(false);
       this.time.delayedCall(400, () => {
@@ -207,6 +225,7 @@ export class OperatingScene extends Phaser.Scene {
   }
 
   playRefusal(person, activity, direction) {
+    if (activity.type === 'occupied') this.showInUseFor(620);
     person.anims.stop();
     person.setTint(0xff7777);
     const fist = this.add.text(person.x + direction * 30, person.y - 45, '✊', {
@@ -220,8 +239,8 @@ export class OperatingScene extends Phaser.Scene {
       this.add.ellipse(0, 0, 62, 30, 0xfff4ce).setStrokeStyle(2, 0x193a40),
       this.label(0, -8, '%#!#@', 13, ink).setOrigin(0.5),
     ]).setAlpha(0);
-    this.time.delayedCall(340, () => bubble.setAlpha(1));
-    this.time.delayedCall(950, () => {
+    this.time.delayedCall(160, () => bubble.setAlpha(1));
+    this.time.delayedCall(620, () => {
       fist.destroy();
       bubble.destroy();
       if (!person.active) return;
