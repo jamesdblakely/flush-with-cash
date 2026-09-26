@@ -88,15 +88,14 @@ export class OperatingScene extends Phaser.Scene {
       }
     }
     this.drawUnit(g, 455, 325);
-    this.occupant = this.add.sprite(455, 321, 'pedestrian-walker-0', 0)
-      .setScale(0.115)
-      .setVisible(false);
+    this.vacancyFrame = this.add.rectangle(477, 284, 43, 28, 0x152a2d).setStrokeStyle(2, 0x071417);
+    this.vacancyLight = this.add.rectangle(477, 284, 35, 19, 0x4f9f63).setStrokeStyle(1, 0xfff4ce);
+    this.vacancyText = this.displayLabel(477, 284, 'VACANT', 6, '#102b20').setOrigin(0.5);
     if (this.state.signage) this.drawSign(g, 455, 325);
     if (this.state.reinforced) this.drawReinforcement(g, 455, 325);
     if (this.state.surgePricing) this.drawSurgeSign(g, 455, 325);
     this.outOfServiceLabel = this.label(455, 266, 'OUT OF SERVICE', 13, '#f59b82')
       .setOrigin(0.5).setVisible(false);
-    this.occupiedLabel = this.label(455, 266, 'IN USE', 13, '#f59b82').setOrigin(0.5).setVisible(false);
     this.displayLabel(480, 146, style[2], 17, '#f4ca72').setOrigin(0.5);
     this.label(480, 170, this.site.clue, 14).setOrigin(0.5);
   }
@@ -153,8 +152,10 @@ export class OperatingScene extends Phaser.Scene {
       s.airFreshener && 'FRESHENER', s.ventilationFan && 'FAN'].filter(Boolean);
     this.upgradeText?.setText(upgrades.length ? 'ACTIVE: ' + upgrades.join(' • ') : 'ACTIVE: NONE');
     this.progress.width = 920 * s.minute / economy.dayMinutes;
-    this.occupiedLabel.setVisible(s.minute < s.occupiedUntil);
-    this.occupant?.setVisible(s.minute < s.occupiedUntil);
+    const inUse = s.minute < s.occupiedUntil;
+    const status = s.condition <= 0 ? ['CLOSED', 0xf59b82, ink] : inUse ? ['IN USE', 0xdf5b55, cream] : ['VACANT', 0x4f9f63, '#102b20'];
+    this.vacancyLight.setFillStyle(status[1]);
+    this.vacancyText.setText(status[0]).setColor(status[2]);
     this.outOfServiceLabel.setVisible(s.condition <= 0);
   }
 
